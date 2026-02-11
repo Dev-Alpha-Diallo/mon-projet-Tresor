@@ -1,0 +1,464 @@
+# 📐 Documentation Technique - Architecture
+
+## Vue d'ensemble
+
+Cette application Laravel suit une architecture **MVC (Model-View-Controller)** claire et bien structurée, avec une couche de services pour la logique métier complexe.
+
+## 🏗️ Architecture générale
+
+```
+┌─────────────────────────────────────────┐
+│           Utilisateur (Web)             │
+└──────────────────┬──────────────────────┘
+                   │
+┌──────────────────▼──────────────────────┐
+│           Routes (web.php)              │
+└──────────────────┬──────────────────────┘
+                   │
+┌──────────────────▼──────────────────────┐
+│         Controllers (HTTP)              │
+│  - DashboardController                  │
+│  - EtudiantController                   │
+│  - PaiementController                   │
+│  - FactureController                    │
+│  - MaisonController                     │
+│  - BailleurController                   │
+│  - RapportController                    │
+└──────────────────┬──────────────────────┘
+                   │
+    ┌──────────────┼──────────────┐
+    │              │              │
+┌───▼───┐    ┌────▼────┐    ┌───▼────┐
+│Models │    │Services │    │ Views  │
+│(ORM)  │    │         │    │(Blade) │
+└───┬───┘    └────┬────┘    └────────┘
+    │             │
+    └─────┬───────┘
+          │
+    ┌─────▼─────┐
+    │  SQLite   │
+    │ Database  │
+    └───────────┘
+```
+
+## 📦 Structure des dossiers
+
+```
+app/
+├── Http/
+│   └── Controllers/          # Contrôleurs HTTP
+│       ├── DashboardController.php
+│       ├── EtudiantController.php
+│       ├── PaiementController.php
+│       ├── FactureController.php
+│       ├── MaisonController.php
+│       ├── BailleurController.php
+│       └── RapportController.php
+│
+├── Models/                   # Modèles Eloquent (ORM)
+│   ├── Bailleur.php
+│   ├── Maison.php
+│   ├── Etudiant.php
+│   ├── Paiement.php
+│   ├── Facture.php
+│   └── PaiementBailleur.php
+│
+└── Services/                 # Logique métier
+    └── RapportService.php
+
+database/
+├── migrations/               # Schéma de base de données
+│   ├── *_create_bailleurs_table.php
+│   ├── *_create_maisons_table.php
+│   ├── *_create_etudiants_table.php
+│   ├── *_create_paiements_table.php
+│   ├── *_create_factures_table.php
+│   └── *_create_paiements_bailleurs_table.php
+│
+└── seeders/                  # Données de test
+    └── DemoDataSeeder.php
+
+resources/views/              # Templates Blade
+├── layouts/
+│   └── app.blade.php
+├── dashboard/
+├── etudiants/
+├── paiements/
+├── factures/
+├── maisons/
+├── bailleurs/
+└── rapports/
+
+routes/
+└── web.php                   # Routes HTTP
+```
+
+## 🗄️ Schéma de base de données
+
+### Relations
+
+```
+bailleurs (1) ─────< (N) maisons
+                        │
+                        │ (1)
+                        │
+                        ├────< (N) etudiants
+                        │         │
+                        │         │ (1)
+                        │         │
+                        │         └────< (N) paiements
+                        │
+                        └────< (N) factures
+```
+
+### Tables principales
+
+#### `bailleurs`
+```sql
+- id
+- nom
+- telephone
+- timestamps
+```
+
+#### `maisons`
+```sql
+- id
+- nom
+- adresse
+- bailleur_id (FK)
+- loyer_total_mensuel
+- timestamps
+```
+
+#### `etudiants`
+```sql
+- id
+- nom
+- filiere
+- maison_id (FK)
+- chambre
+- loyer_mensuel
+- timestamps
+```
+
+#### `paiements`
+```sql
+- id
+- etudiant_id (FK)
+- montant
+- date_paiement
+- moyen_paiement (enum: especes, mobile_money, virement)
+- remarque
+- timestamps
+```
+
+#### `factures`
+```sql
+- id
+- numero_facture (unique)
+- type (enum: eau, electricite, reparation, autre)
+- maison_id (FK)
+- montant
+- date_paiement
+- description
+- timestamps
+```
+
+#### `paiements_bailleurs`
+```sql
+- id
+- bailleur_id (FK)
+- maison_id (FK)
+- montant
+- date_paiement
+- remarque
+- timestamps
+```
+
+## 🧮 Logique de calcul des soldes
+
+### 1. Solde étudiant
+
+**Formule :**
+```php
+Solde = Total payé - Total dû
+```
+
+**Calcul du total dû :**
+```php
+Total dû = Loyer mensuel × Nombre de mois depuis inscription
+```
+
+**Implémentation :**
+```php
+// Dans Etudiant.php
+public function getSoldeAttribute(): float
+{
+    return $this->total_paye - $this->total_du;
+}
+
+public function getTotalDuAttribute(): float
+{
+    $moisDepuisInscription = Carbon::parse($this->created_at)
+        ->diffInMonths(Carbon::now()) + 1;
+    return $this->loyer_mensuel * $moisDepuisInscription;
+}
+```
+
+### 2. Solde maison
+
+**Formule :**
+```php
+Solde = Recettes - Dépenses - Paiements au bailleur
+```
+
+**Implémentation :**
+```php
+// Dans Maison.php
+public function getSoldeAttribute(): float
+{
+    return $this->total_recettes 
+         - $this->total_depenses 
+         - $this->total_paye_bailleur;
+}
+```
+
+### 3. Solde global
+
+**Formule :**
+```php
+Solde caisse = Total paiements étudiants - Total factures
+```
+
+**Implémentation :**
+```php
+// Dans RapportService.php
+$totalRecettes = Paiement::sum('montant');
+$totalDepenses = Facture::sum('montant');
+$soldeCaisse = $totalRecettes - $totalDepenses;
+```
+
+## 🎯 Patterns et bonnes pratiques
+
+### 1. Repository Pattern (implicite via Eloquent)
+
+Les modèles Eloquent agissent comme des repositories :
+```php
+// Récupération simple
+$etudiants = Etudiant::all();
+
+// Avec relations
+$etudiants = Etudiant::with('maison', 'paiements')->get();
+
+// Filtrage
+$debiteurs = Etudiant::all()->filter(fn($e) => $e->isDebiteur());
+```
+
+### 2. Service Layer
+
+La logique métier complexe est dans `RapportService.php` :
+```php
+class RapportService
+{
+    public function genererRapportMensuel(int $mois, int $annee): string
+    {
+        // Collecte des données
+        // Génération PDF
+        // Sauvegarde
+    }
+    
+    private function collecterDonneesMensuelles(...) { }
+    private function calculerSoldeJusquaDate(...) { }
+}
+```
+
+### 3. Accessors Eloquent
+
+Calculs automatiques via les accessors :
+```php
+// Dans le modèle
+public function getSoldeAttribute(): float
+{
+    return $this->calculateSolde();
+}
+
+// Utilisation dans les vues
+{{ $etudiant->solde }} // Appel automatique de getSoldeAttribute()
+```
+
+### 4. Resource Controllers
+
+Routes RESTful complètes :
+```php
+Route::resource('etudiants', EtudiantController::class);
+
+// Génère automatiquement :
+// GET    /etudiants           -> index()
+// GET    /etudiants/create    -> create()
+// POST   /etudiants           -> store()
+// GET    /etudiants/{id}      -> show()
+// GET    /etudiants/{id}/edit -> edit()
+// PUT    /etudiants/{id}      -> update()
+// DELETE /etudiants/{id}      -> destroy()
+```
+
+## 📊 Flux de génération de rapport PDF
+
+```
+1. Utilisateur sélectionne mois/année
+   │
+   ▼
+2. RapportController::generer()
+   │
+   ▼
+3. RapportService::genererRapportMensuel()
+   │
+   ├─> Collecte données mensuelles
+   │   ├─> Paiements du mois
+   │   ├─> Factures du mois
+   │   ├─> Calcul soldes
+   │   └─> Liste débiteurs/créditeurs
+   │
+   ├─> Génération PDF (DomPDF)
+   │   └─> Vue: rapports/mensuel.blade.php
+   │
+   └─> Sauvegarde: storage/app/reports/
+       └─> rapport_tresorerie_YYYY_MM.pdf
+```
+
+## 🔐 Sécurité et validation
+
+### Validation des données
+
+Chaque contrôleur valide les données entrantes :
+```php
+$validated = $request->validate([
+    'nom' => 'required|string|max:255',
+    'filiere' => 'required|string|max:255',
+    'maison_id' => 'required|exists:maisons,id',
+    'chambre' => 'required|string|max:50',
+    'loyer_mensuel' => 'required|numeric|min:0',
+]);
+```
+
+### Protection CSRF
+
+Tous les formulaires incluent `@csrf` :
+```html
+<form method="POST">
+    @csrf
+    <!-- champs -->
+</form>
+```
+
+### Protection contre l'injection SQL
+
+Eloquent utilise des requêtes préparées automatiquement :
+```php
+// Sécurisé automatiquement
+Etudiant::where('nom', $nom)->first();
+```
+
+## 🚀 Optimisations
+
+### 1. Eager Loading
+
+Éviter le problème N+1 :
+```php
+// ❌ Mauvais (N+1 queries)
+$etudiants = Etudiant::all();
+foreach ($etudiants as $etudiant) {
+    echo $etudiant->maison->nom; // 1 query par étudiant
+}
+
+// ✅ Bon (2 queries seulement)
+$etudiants = Etudiant::with('maison')->get();
+foreach ($etudiants as $etudiant) {
+    echo $etudiant->maison->nom;
+}
+```
+
+### 2. Pagination
+
+Pour les longues listes :
+```php
+$paiements = Paiement::with('etudiant.maison')
+    ->latest('date_paiement')
+    ->paginate(20);
+```
+
+### 3. Collections
+
+Utilisation des collections Laravel :
+```php
+$debiteurs = $etudiants->filter(fn($e) => $e->isDebiteur());
+$totalDettes = $debiteurs->sum('solde');
+```
+
+## 📝 Convention de nommage
+
+### Modèles
+- Singulier, PascalCase
+- Exemple : `Etudiant`, `Maison`, `Bailleur`
+
+### Tables
+- Pluriel, snake_case
+- Exemple : `etudiants`, `maisons`, `bailleurs`
+
+### Contrôleurs
+- Suffixe `Controller`
+- Exemple : `EtudiantController`, `PaiementController`
+
+### Routes
+- Pluriel, kebab-case
+- Exemple : `/etudiants`, `/paiements`, `/rapports`
+
+### Vues
+- Dossiers au pluriel, fichiers descriptifs
+- Exemple : `etudiants/index.blade.php`, `etudiants/create.blade.php`
+
+## 🧪 Tests (recommandés pour production)
+
+Structure de tests recommandée :
+```
+tests/
+├── Feature/
+│   ├── EtudiantTest.php
+│   ├── PaiementTest.php
+│   └── RapportTest.php
+└── Unit/
+    ├── Models/
+    │   ├── EtudiantTest.php
+    │   └── MaisonTest.php
+    └── Services/
+        └── RapportServiceTest.php
+```
+
+Exemple de test :
+```php
+public function test_student_solde_is_calculated_correctly()
+{
+    $etudiant = Etudiant::factory()->create([
+        'loyer_mensuel' => 100000
+    ]);
+    
+    Paiement::factory()->create([
+        'etudiant_id' => $etudiant->id,
+        'montant' => 100000
+    ]);
+    
+    $this->assertEquals(0, $etudiant->fresh()->solde);
+}
+```
+
+## 📚 Ressources
+
+- [Documentation Laravel](https://laravel.com/docs)
+- [Eloquent ORM](https://laravel.com/docs/eloquent)
+- [Blade Templates](https://laravel.com/docs/blade)
+- [Laravel DomPDF](https://github.com/barryvdh/laravel-dompdf)
+
+---
+
+**Cette architecture garantit un code maintenable, évolutif et performant.**
