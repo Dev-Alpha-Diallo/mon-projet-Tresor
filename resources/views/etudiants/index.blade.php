@@ -11,7 +11,7 @@
             <p class="text-sm text-gray-600">Gérer les étudiants</p>
         </div>
         <a href="{{ route('etudiants.create') }}" 
-           class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center">
+           class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg transition-all duration-200">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
             </svg>
@@ -19,32 +19,63 @@
         </a>
     </div>
 
-    <!-- Filters -->
-    <div class="bg-white rounded-lg border p-3">
-        <form action="{{ route('etudiants.index') }}" method="GET" class="flex gap-2">
-            <input type="text" 
-                   name="nom" 
-                   value="{{ request('nom') }}" 
-                   placeholder="Nom..."
-                   class="flex-1 px-3 py-2 border rounded-lg">
-            <select name="maison_id" class="px-3 py-2 border rounded-lg">
-                <option value="">Toutes les maisons</option>
-                @foreach($maisons as $maison)
-                    <option value="{{ $maison->id }}" {{ request('maison_id') == $maison->id ? 'selected' : '' }}>
-                        {{ $maison->nom }}
-                    </option>
-                @endforeach
-            </select>
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">
-                🔍
-            </button>
-            @if(request('nom') || request('maison_id'))
-                <a href="{{ route('etudiants.index') }}" class="px-4 py-2 bg-gray-100 rounded-lg">
-                    ✕
-                </a>
-            @endif
-        </form>
-    </div>
+   <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+    <form action="{{ route('etudiants.index') }}" 
+          method="GET" 
+          class="flex flex-col sm:flex-row gap-3 items-center">
+
+        {{-- Recherche par nom --}}
+        <input type="text" 
+               name="nom" 
+               value="{{ request('nom') }}" 
+               placeholder="Nom..."
+               class="flex-1 px-4 py-2 border border-gray-300 rounded-xl 
+                      focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 
+                      transition-all text-sm">
+
+        {{-- Recherche par chambre --}}
+        <input type="number" 
+               name="chambre" 
+               value="{{ request('chambre') }}" 
+               placeholder="N° Chambre"
+               class="w-32 px-4 py-2 border border-gray-300 rounded-xl 
+                      focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 
+                      transition-all text-sm">
+
+        {{-- Filtre maison --}}
+        <select name="maison_id" 
+                onchange="this.form.submit()"
+                class="px-4 py-2 border border-gray-300 rounded-xl 
+                       focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 
+                       transition-all text-sm">
+            <option value="">Toutes les maisons</option>
+            @foreach($maisons as $maison)
+                <option value="{{ $maison->id }}" 
+                    {{ request('maison_id') == $maison->id ? 'selected' : '' }}>
+                    {{ $maison->nom }}
+                </option>
+            @endforeach
+        </select>
+
+        {{-- Bouton --}}
+        <button type="submit" 
+                class="px-4 py-2 bg-indigo-600 text-white rounded-xl 
+                       hover:bg-indigo-700 transition-all text-sm font-medium">
+            🔍
+        </button>
+
+        {{-- Reset --}}
+        @if(request('nom') || request('maison_id') || request('chambre'))
+            <a href="{{ route('etudiants.index') }}" 
+               class="px-4 py-2 bg-gray-100 rounded-xl 
+                      hover:bg-gray-200 transition-all text-sm font-medium">
+                ✕
+            </a>
+        @endif
+
+    </form>
+</div>
+
 
     <!-- Table -->
     <div class="bg-white rounded-lg border overflow-hidden">
@@ -94,16 +125,27 @@
                         </td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex gap-3 justify-end">
-                                <a href="{{ route('etudiants.edit', $etudiant) }}" class="text-blue-600">
+                               <a href="{{ route('etudiants.edit', $etudiant) }}"
+                                    class="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 font-medium">
                                     Modifier
-                                </a>
+                                    </a>
+
                                 <form action="{{ route('etudiants.destroy', $etudiant) }}" method="POST">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" onclick="return confirm('Supprimer cet étudiant ?')" 
-                                            class="text-red-600">
-                                        Supprimer
+                                    <button type="submit"
+                                        onclick="return confirm('Supprimer cet étudiant ?')"
+                                        class="flex items-center space-x-1 text-xs px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-300 hover:text-white-700 transition-all duration-200 font-medium">
+
+                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd"
+                                                d="M6 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 112 0v6a1 1 0 11-2 0V8zM4 5h12v1H4V5zm2-2h8l1 2H5l1-2z"
+                                                clip-rule="evenodd"/>
+                                        </svg>
+
+                                        <span>Supprimer</span>
                                     </button>
+
                                 </form>
                             </div>
                         </td>
@@ -115,7 +157,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
                             </svg>
                             <p class="mt-2 text-sm text-gray-600">Aucun étudiant trouvé</p>
-                            <a href="{{ route('etudiants.create') }}" class="mt-3 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">
+                            <a href="{{ route('etudiants.create') }}" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg transition-all duration-200">
                                 Ajouter un étudiant
                             </a>
                         </td>

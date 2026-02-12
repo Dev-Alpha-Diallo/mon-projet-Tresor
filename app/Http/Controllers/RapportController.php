@@ -32,19 +32,30 @@ class RapportController extends Controller
     }
 
     /**
-     * Génère un rapport mensuel
+     * Génère un rapport (mensuel, trimestriel ou annuel)
      */
     public function generer(Request $request)
     {
         $validated = $request->validate([
-            'mois' => 'required|integer|min:1|max:12',
+            'type' => 'required|in:mensuel,trimestriel,annuel',
+            'mois' => 'required_if:type,mensuel|nullable|integer|min:1|max:12',
+            'trimestre' => 'required_if:type,trimestriel|nullable|integer|min:1|max:4',
             'annee' => 'required|integer|min:2020|max:2030',
         ]);
 
-        $cheminFichier = $this->rapportService->genererRapportMensuel(
-            $validated['mois'],
-            $validated['annee']
-        );
+        $cheminFichier = match($validated['type']) {
+            'mensuel' => $this->rapportService->genererRapportMensuel(
+                $validated['mois'],
+                $validated['annee']
+            ),
+            'trimestriel' => $this->rapportService->genererRapportTrimestriel(
+                $validated['trimestre'],
+                $validated['annee']
+            ),
+            'annuel' => $this->rapportService->genererRapportAnnuel(
+                $validated['annee']
+            ),
+        };
 
         return redirect()->route('rapports.index')
             ->with('success', 'Rapport généré avec succès : ' . basename($cheminFichier));
@@ -65,26 +76,37 @@ class RapportController extends Controller
     }
 
     /**
-     * Prévisualise un rapport mensuel (sans sauvegarder)
+     * Prévisualise un rapport (sans sauvegarder)
      */
     public function previsualiser(Request $request)
     {
         $validated = $request->validate([
-            'mois' => 'required|integer|min:1|max:12',
+            'type' => 'required|in:mensuel,trimestriel,annuel',
+            'mois' => 'required_if:type,mensuel|nullable|integer|min:1|max:12',
+            'trimestre' => 'required_if:type,trimestriel|nullable|integer|min:1|max:4',
             'annee' => 'required|integer|min:2020|max:2030',
         ]);
 
-        // Utiliser une méthode privée pour obtenir les données
-        $reflection = new \ReflectionClass($this->rapportService);
-        $method = $reflection->getMethod('collecterDonneesMensuelles');
-        $method->setAccessible(true);
-        
-        $data = $method->invoke(
-            $this->rapportService,
-            $validated['mois'],
-            $validated['annee']
-        );
+        $data = match($validated['type']) {
+            'mensuel' => $this->rapportService->collecterDonneesMensuelles(
+                $validated['mois'],
+                $validated['annee']
+            ),
+            'trimestriel' => $this->rapportService->collecterDonneesTrimestrielles(
+                $validated['trimestre'],
+                $validated['annee']
+            ),
+            'annuel' => $this->rapportService->collecterDonneesAnnuelles(
+                $validated['annee']
+            ),
+        };
 
-        return view('rapports.mensuel', $data);
+        $view = match($validated['type']) {
+            'mensuel' => 'rapports.mensuel',
+            'trimestriel' => 'rapports.trimestriel',
+            'annuel' => 'rapports.annuel',
+        };
+
+        return view($view, $data);
     }
 }

@@ -3,119 +3,233 @@
 @section('title', 'Tableau de bord')
 
 @section('content')
-<div class="p-4 space-y-4">
+<div class="space-y-6">
+    <!-- En-tête -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Tableau de bord</h1>
+            <p class="mt-1 text-sm text-gray-700">Vue d'ensemble de votre trésorerie</p>
+        </div>
+       <div class="flex items-center gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 
+            border border-blue-100 px-5 py-3 rounded-2xl shadow-sm w-fit">
+    
+    <div class="text-2xl">
+        <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2-1.343-2-3-2zM12 14c-4.418 0-8 1.79-8 4v1h16v-1c0-2.21-3.582-4-8-4z"/>
+        </svg>
+    </div>
+
+    <div>
+        <p class="text-xs text-blue-500 uppercase tracking-wider">
+            Aujourd'hui
+        </p>
+        <p class="text-sm font-bold text-gray-800">
+            {{ \Carbon\Carbon::now()->locale('fr')->isoFormat('dddd D MMMM YYYY') }}
+        </p>
+    </div>
+
+</div>
+
+    </div>
+
     <!-- Indicateurs principaux -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-3 text-white">
-            <p class="text-xs">Caisse</p>
-            <p class="text-lg font-bold">{{ number_format($soldeCaisse, 0, ',', ' ') }} F</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="glass-effect rounded-2xl p-6 border border-gray-200/50 hover:shadow-xl transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-600">Solde de la caisse</p>
+                    <p class="mt-2 text-3xl font-bold {{ $soldeCaisse >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                        {{ number_format($soldeCaisse, 0, ',', ' ') }}
+                    </p>
+                    <p class="mt-1 text-xs text-gray-500">FCFA</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                </div>
+            </div>
         </div>
-        <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-3 text-white">
-            <p class="text-xs">Recettes</p>
-            <p class="text-lg font-bold">{{ number_format($totalRecettes, 0, ',', ' ') }} F</p>
+
+        <div class="glass-effect rounded-2xl p-6 border border-gray-200/50 hover:shadow-xl transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-600">Total recettes</p>
+                    <p class="mt-2 text-3xl font-bold text-green-600">{{ number_format($totalRecettes, 0, ',', ' ') }}</p>
+                    <p class="mt-1 text-xs text-gray-500">FCFA</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
+                    </svg>
+                </div>
+            </div>
         </div>
-        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-3 text-white">
-            <p class="text-xs">Dépenses</p>
-            <p class="text-lg font-bold">{{ number_format($totalDepenses, 0, ',', ' ') }} F</p>
+
+        <div class="glass-effect rounded-2xl p-6 border border-gray-200/50 hover:shadow-xl transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-600">Total dépenses</p>
+                    <p class="mt-2 text-3xl font-bold text-orange-600">{{ number_format($totalDepenses, 0, ',', ' ') }}</p>
+                    <p class="mt-1 text-xs text-gray-500">FCFA</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/>
+                    </svg>
+                </div>
+            </div>
         </div>
-        <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-3 text-white">
-            <p class="text-xs">Étudiants</p>
-            <p class="text-lg font-bold">{{ $nombreEtudiants }}</p>
+
+        <div class="glass-effect rounded-2xl p-6 border border-gray-200/50 hover:shadow-xl transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-600">Étudiants</p>
+                    <p class="mt-2 text-3xl font-bold text-purple-600">{{ $nombreEtudiants }}</p>
+                    <p class="mt-1 text-xs text-gray-500">Inscrits</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Statuts étudiants -->
-    <div class="grid grid-cols-3 gap-3">
-        <div class="bg-white rounded-lg border-l-4 border-red-500 p-3">
-            <div class="flex justify-between items-center">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="glass-effect rounded-2xl p-6 border-l-4 border-red-500 hover:shadow-xl transition-all duration-300">
+            <div class="flex items-center justify-between mb-4">
                 <div>
-                    <p class="text-xs text-gray-500">Débiteurs</p>
-                    <p class="font-bold text-gray-800">{{ $nombreDebiteurs }}</p>
+                    <p class="text-sm font-medium text-gray-600">Étudiants débiteurs</p>
+                    <p class="mt-2 text-2xl font-bold text-red-600">{{ $nombreDebiteurs }}</p>
                 </div>
-                <div class="text-red-500">📉</div>
+                <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/>
+                    </svg>
+                </div>
             </div>
-            <p class="text-xs text-gray-400 mt-1">{{ number_format($totalDettes, 0, ',', ' ') }} F</p>
+            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                <span class="text-xs text-gray-500">Total dettes</span>
+                <span class="text-sm font-semibold text-red-600">{{ number_format($totalDettes, 0, ',', ' ') }} F</span>
+            </div>
         </div>
 
-        <div class="bg-white rounded-lg border-l-4 border-green-500 p-3">
-            <div class="flex justify-between items-center">
+        <div class="glass-effect rounded-2xl p-6 border-l-4 border-green-500 hover:shadow-xl transition-all duration-300">
+            <div class="flex items-center justify-between mb-4">
                 <div>
-                    <p class="text-xs text-gray-500">Créditeurs</p>
-                    <p class="font-bold text-gray-800">{{ $nombreCrediteurs }}</p>
+                    <p class="text-sm font-medium text-gray-600">Étudiants créditeurs</p>
+                    <p class="mt-2 text-2xl font-bold text-green-600">{{ $nombreCrediteurs }}</p>
                 </div>
-                <div class="text-green-500">📈</div>
+                <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                    </svg>
+                </div>
             </div>
-            <p class="text-xs text-gray-400 mt-1">{{ number_format($totalAvances, 0, ',', ' ') }} F</p>
+            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                <span class="text-xs text-gray-500">Total avances</span>
+                <span class="text-sm font-semibold text-green-600">{{ number_format($totalAvances, 0, ',', ' ') }} F</span>
+            </div>
         </div>
 
-        <div class="bg-white rounded-lg border-l-4 border-blue-500 p-3">
-            <div class="flex justify-between items-center">
+        <div class="glass-effect rounded-2xl p-6 border-l-4 border-blue-500 hover:shadow-xl transition-all duration-300">
+            <div class="flex items-center justify-between mb-4">
                 <div>
-                    <p class="text-xs text-gray-500">À jour</p>
-                    <p class="font-bold text-gray-800">{{ $nombreEtudiants - $nombreDebiteurs - $nombreCrediteurs }}</p>
+                    <p class="text-sm font-medium text-gray-600">À jour</p>
+                    <p class="mt-2 text-2xl font-bold text-blue-600">{{ $nombreEtudiants - $nombreDebiteurs - $nombreCrediteurs }}</p>
                 </div>
-                <div class="text-blue-500">✅</div>
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                <span class="text-xs text-gray-500">Pourcentage</span>
+                <span class="text-sm font-semibold text-blue-600">{{ $nombreEtudiants > 0 ? round(($nombreEtudiants - $nombreDebiteurs - $nombreCrediteurs) / $nombreEtudiants * 100) : 0 }}%</span>
             </div>
         </div>
     </div>
 
-    <!-- Tableau maisons -->
-    <div class="bg-white rounded-lg border">
-        <div class="px-3 py-2 bg-gray-50 border-b">
-            <h2 class="font-medium text-gray-800 text-sm">Situation par maison</h2>
+    <!-- Maisons -->
+    <div class="glass-effect rounded-2xl border border-gray-200/50 overflow-hidden">
+        <div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b">
+            <h2 class="text-lg font-bold text-gray-900">Maisons ({{ $maisons->count() }})</h2>
         </div>
-        <table class="w-full text-xs">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-3 py-2 text-left text-gray-600">Maison</th>
-                    <th class="px-3 py-2 text-left text-gray-600">Bailleur</th>
-                    <th class="px-3 py-2 text-left text-gray-600">Solde</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-                @forelse($maisons as $maison)
-                <tr class="hover:bg-gray-50">
-                    <td class="px-3 py-2">
-                        <div class="font-medium text-blue-600">{{ $maison->nom }}</div>
-                        <div class="text-gray-400">{{ $maison->etudiants->count() }} étudiants</div>
-                    </td>
-                    <td class="px-3 py-2 text-gray-700">{{ $maison->bailleur->nom }}</td>
-                    <td class="px-3 py-2">
-                        <span class="px-2 py-1 rounded-full text-xs {{ $maison->solde >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                            {{ number_format($maison->solde, 0, ',', ' ') }} F
-                        </span>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="3" class="px-3 py-4 text-center text-gray-400 text-xs">Aucune maison</td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+        <div class="overflow-x-auto" style="max-height: 400px;">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Maison</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Bailleur</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Étudiants</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Solde</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @forelse($maisons as $maison)
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-semibold text-gray-900">{{ $maison->nom }}</div>
+                            <div class="text-xs text-gray-500">{{ Str::limit($maison->adresse, 30) }}</div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900">{{ $maison->bailleur->nom }}</td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                {{ $maison->etudiants->count() }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold {{ $maison->solde >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                {{ number_format($maison->solde, 0, ',', ' ') }} F
+                            </span>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="4" class="px-6 py-8 text-center text-gray-500">Aucune maison</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <!-- Actions rapides -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <a href="{{ route('paiements.create') }}" 
-           class="bg-blue-500 hover:bg-blue-600 text-white rounded-lg p-2 text-xs text-center transition">
-            💳 Paiement
-        </a>
+    <!-- Actions -->
+    <div class="glass-effect rounded-2xl p-6 border border-gray-200/50">
+        <h2 class="text-lg font-bold text-gray-900 mb-4">Actions rapides</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <a href="{{ route('paiements.create') }}" class="group rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white hover:shadow-xl transition-all hover:scale-105">
+                <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                </svg>
+                <p class="font-semibold">Paiement</p>
+            </a>
 
-        <a href="{{ route('factures.create') }}" 
-           class="bg-orange-500 hover:bg-orange-600 text-white rounded-lg p-2 text-xs text-center transition">
-            🧾 Facture
-        </a>
+            <a href="{{ route('factures.create') }}" class="group rounded-xl bg-gradient-to-br from-orange-500 to-red-600 p-6 text-white hover:shadow-xl transition-all hover:scale-105">
+                <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p class="font-semibold">Creer Facture</p>
+            </a>
 
-        <a href="{{ route('factures.index') }}" 
-           class="bg-purple-500 hover:bg-purple-600 text-white rounded-lg p-2 text-xs text-center transition">
-            📄 Factures
-        </a>
+            <a href="{{ route('factures.index') }}" class="group rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 p-6 text-white hover:shadow-xl transition-all hover:scale-105">
+                <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p class="font-semibold">Factures</p>
+            </a>
 
-        <a href="{{ route('rapports.index') }}" 
-           class="bg-green-500 hover:bg-green-600 text-white rounded-lg p-2 text-xs text-center transition">
-            📊 Rapports
-        </a>
+            <a href="{{ route('rapports.index') }}" class="group rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 p-6 text-white hover:shadow-xl transition-all hover:scale-105">
+                <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                <p class="font-semibold">Rapports</p>
+            </a>
+        </div>
     </div>
 </div>
 @endsection

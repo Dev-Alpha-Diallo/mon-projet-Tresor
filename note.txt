@@ -1,0 +1,8 @@
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+
+User::create([
+    'name' => 'Alpha Diallo',
+    'email' => 'alpha@example.com',
+    'password' => Hash::make('password123')
+]);

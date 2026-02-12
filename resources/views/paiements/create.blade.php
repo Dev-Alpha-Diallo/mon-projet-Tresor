@@ -77,10 +77,10 @@
             </div>
 
             <div class="flex space-x-4 mt-6">
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg">
+                <button type="submit" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg transition-all duration-200">
                     Enregistrer
                 </button>
-                <a href="{{ route('paiements.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg">
+                <a href="{{ route('paiements.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1.5 rounded-lg">
                     Annuler
                 </a>
             </div>

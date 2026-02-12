@@ -8,11 +8,11 @@
     <div class="mb-8">
         <div class="flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-bold text-gray-800">🏠 Ajouter une maison</h1>
+                <h1 class="text-2xl font-bold text-gray-800"> Ajouter une maison</h1>
                 <p class="text-gray-500 mt-1">Nouvelle propriété locative</p>
             </div>
             <a href="{{ route('maisons.index') }}" 
-               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+               class="flex items-center space-x-2 px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
                 ← Retour
             </a>
         </div>
@@ -79,11 +79,11 @@
             <!-- Boutons -->
             <div class="mt-8 pt-6 border-t flex justify-end space-x-3">
                 <a href="{{ route('maisons.index') }}" 
-                   class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                   class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
                     Annuler
                 </a>
                 <button type="submit" 
-                        class="px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark">
+                        class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg transition-all duration-200">
                     Enregistrer la maison
                 </button>
             </div>

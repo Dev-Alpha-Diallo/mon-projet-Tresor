@@ -43,7 +43,7 @@ class RapportService
      * @param int $annee
      * @return array
      */
-    private function collecterDonneesMensuelles(int $mois, int $annee): array
+    public function collecterDonneesMensuelles(int $mois, int $annee): array
     {
         $dateDebut = Carbon::create($annee, $mois, 1)->startOfMonth();
         $dateFin = Carbon::create($annee, $mois, 1)->endOfMonth();
@@ -68,7 +68,7 @@ class RapportService
         // Étudiants débiteurs et créditeurs
         $etudiants = Etudiant::with('maison')->get();
         $etudiantsDebiteurs = $etudiants->filter(fn($e) => $e->isDebiteur())->sortBy('solde');
-        $etudiantsCrediteurs = $etudiants->filter(fn($e) => $e->isCrediteur())->sortByDesc('solde');
+        $etudiansCrediteurs = $etudiants->filter(fn($e) => $e->isCrediteur())->sortByDesc('solde');
 
         // Situation par maison
         $maisons = Maison::with(['bailleur', 'etudiants'])->get();
@@ -95,7 +95,7 @@ class RapportService
             
             // Étudiants
             'etudiantsDebiteurs' => $etudiantsDebiteurs,
-            'etudiantsCrediteurs' => $etudiantsCrediteurs,
+            'etudiantsCrediteurs' => $etudiansCrediteurs,
             
             // Maisons
             'maisons' => $maisons,
@@ -137,6 +137,182 @@ class RapportService
             'soldeCaisse' => $soldeCaisse,
             'totalRecettes' => $totalRecettes,
             'totalDepenses' => $totalDepenses,
+            'nombreEtudiants' => $etudiants->count(),
+            'nombreDebiteurs' => $etudiantsDebiteurs->count(),
+            'nombreCrediteurs' => $etudiantsCrediteurs->count(),
+            'totalDettes' => abs($etudiantsDebiteurs->sum('solde')),
+            'totalAvances' => $etudiantsCrediteurs->sum('solde'),
+            'maisons' => $maisons,
+        ];
+    }
+
+    /**
+     * Génère un rapport trimestriel
+     */
+    public function genererRapportTrimestriel(int $trimestre, int $annee): string
+    {
+        $data = $this->collecterDonneesTrimestrielles($trimestre, $annee);
+        
+        $pdf = Pdf::loadView('rapports.trimestriel', $data);
+        
+        $nomFichier = sprintf('rapport_trimestriel_%04d_T%d.pdf', $annee, $trimestre);
+        $cheminComplet = 'reports/' . $nomFichier;
+        
+        Storage::put($cheminComplet, $pdf->output());
+        
+        return $cheminComplet;
+    }
+
+    /**
+     * Collecte les données pour un trimestre
+     */
+    public function collecterDonneesTrimestrielles(int $trimestre, int $annee): array
+    {
+        // Calcul des mois du trimestre
+        $moisDebut = ($trimestre - 1) * 3 + 1;
+        $moisFin = $trimestre * 3;
+        
+        $dateDebut = Carbon::create($annee, $moisDebut, 1)->startOfMonth();
+        $dateFin = Carbon::create($annee, $moisFin, 1)->endOfMonth();
+
+        // Paiements du trimestre
+        $paiements = Paiement::whereBetween('date_paiement', [$dateDebut, $dateFin])
+            ->with('etudiant.maison')
+            ->orderBy('date_paiement')
+            ->get();
+        
+        $totalRecettes = $paiements->sum('montant');
+
+        // Factures du trimestre
+        $factures = Facture::whereBetween('date_paiement', [$dateDebut, $dateFin])
+            ->with('maison')
+            ->orderBy('date_paiement')
+            ->get();
+        
+        $totalDepenses = $factures->sum('montant');
+
+        // Solde
+        $soldeCaisse = $totalRecettes - $totalDepenses;
+
+        // Étudiants
+        $etudiants = Etudiant::with('maison')->get();
+        $etudiantsDebiteurs = $etudiants->filter(fn($e) => $e->solde < 0);
+        $etudiantsCrediteurs = $etudiants->filter(fn($e) => $e->solde > 0);
+
+        // Maisons
+        $maisons = Maison::with(['bailleur', 'etudiants'])->get();
+
+        $nomsMois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+        
+        $periodeDebut = $nomsMois[$moisDebut - 1];
+        $periodeFin = $nomsMois[$moisFin - 1];
+
+        return [
+            'trimestre' => $trimestre,
+            'annee' => $annee,
+            'periode' => "$periodeDebut - $periodeFin $annee",
+            'dateDebut' => $dateDebut,
+            'dateFin' => $dateFin,
+            'paiements' => $paiements,
+            'factures' => $factures,
+            'totalRecettes' => $totalRecettes,
+            'totalDepenses' => $totalDepenses,
+            'soldeCaisse' => $soldeCaisse,
+            'etudiantsDebiteurs' => $etudiantsDebiteurs,
+            'etudiantsCrediteurs' => $etudiantsCrediteurs,
+            'nombreEtudiants' => $etudiants->count(),
+            'nombreDebiteurs' => $etudiantsDebiteurs->count(),
+            'nombreCrediteurs' => $etudiantsCrediteurs->count(),
+            'totalDettes' => abs($etudiantsDebiteurs->sum('solde')),
+            'totalAvances' => $etudiantsCrediteurs->sum('solde'),
+            'maisons' => $maisons,
+        ];
+    }
+
+    /**
+     * Génère un rapport annuel (mandat)
+     */
+    public function genererRapportAnnuel(int $annee): string
+    {
+        $data = $this->collecterDonneesAnnuelles($annee);
+        
+        $pdf = Pdf::loadView('rapports.annuel', $data);
+        
+        $nomFichier = sprintf('rapport_annuel_%04d.pdf', $annee);
+        $cheminComplet = 'reports/' . $nomFichier;
+        
+        Storage::put($cheminComplet, $pdf->output());
+        
+        return $cheminComplet;
+    }
+
+    /**
+     * Collecte les données pour une année complète
+     */
+    public function collecterDonneesAnnuelles(int $annee): array
+    {
+        $dateDebut = Carbon::create($annee, 1, 1)->startOfYear();
+        $dateFin = Carbon::create($annee, 12, 31)->endOfYear();
+
+        // Paiements de l'année
+        $paiements = Paiement::whereBetween('date_paiement', [$dateDebut, $dateFin])
+            ->with('etudiant.maison')
+            ->orderBy('date_paiement')
+            ->get();
+        
+        $totalRecettes = $paiements->sum('montant');
+
+        // Factures de l'année
+        $factures = Facture::whereBetween('date_paiement', [$dateDebut, $dateFin])
+            ->with('maison')
+            ->orderBy('date_paiement')
+            ->get();
+        
+        $totalDepenses = $factures->sum('montant');
+
+        // Solde
+        $soldeCaisse = $totalRecettes - $totalDepenses;
+
+        // Statistiques mensuelles
+        $statistiquesMensuelles = [];
+        for ($mois = 1; $mois <= 12; $mois++) {
+            $debutMois = Carbon::create($annee, $mois, 1)->startOfMonth();
+            $finMois = Carbon::create($annee, $mois, 1)->endOfMonth();
+            
+            $recettesMois = Paiement::whereBetween('date_paiement', [$debutMois, $finMois])->sum('montant');
+            $depensesMois = Facture::whereBetween('date_paiement', [$debutMois, $finMois])->sum('montant');
+            
+            $statistiquesMensuelles[] = [
+                'mois' => $mois,
+                'nomMois' => $debutMois->locale('fr')->isoFormat('MMMM'),
+                'recettes' => $recettesMois,
+                'depenses' => $depensesMois,
+                'solde' => $recettesMois - $depensesMois,
+            ];
+        }
+
+        // Étudiants
+        $etudiants = Etudiant::with('maison')->get();
+        $etudiantsDebiteurs = $etudiants->filter(fn($e) => $e->solde < 0);
+        $etudiantsCrediteurs = $etudiants->filter(fn($e) => $e->solde > 0);
+
+        // Maisons
+        $maisons = Maison::with(['bailleur', 'etudiants'])->get();
+
+        return [
+            'annee' => $annee,
+            'periode' => "Année $annee",
+            'dateDebut' => $dateDebut,
+            'dateFin' => $dateFin,
+            'paiements' => $paiements,
+            'factures' => $factures,
+            'totalRecettes' => $totalRecettes,
+            'totalDepenses' => $totalDepenses,
+            'soldeCaisse' => $soldeCaisse,
+            'statistiquesMensuelles' => $statistiquesMensuelles,
+            'etudiantsDebiteurs' => $etudiantsDebiteurs,
+            'etudiantsCrediteurs' => $etudiantsCrediteurs,
             'nombreEtudiants' => $etudiants->count(),
             'nombreDebiteurs' => $etudiantsDebiteurs->count(),
             'nombreCrediteurs' => $etudiantsCrediteurs->count(),

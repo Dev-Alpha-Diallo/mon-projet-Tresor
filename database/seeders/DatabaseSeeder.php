@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'admin@treso.local'],
             [
-                'name' => 'Administrateur Trésorerie',
+                'name' => 'Admin',
                 'password' => Hash::make('password'),
             ]
         );

@@ -107,14 +107,15 @@
             <!-- Actions -->
             <div class="flex justify-between items-center pt-6 border-t">
                 <a href="{{ route('etudiants.index') }}"
-                   class="px-6 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition">
+                   class="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition">
                     Annuler
                 </a>
 
                 <button type="submit"
-                    class="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-lg transition">
-                    Enregistrer l’étudiant
+                    class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg transition-all duration-200">
+                    Creer l’étudiant
                 </button>
+
             </div>
         </form>
     </div>

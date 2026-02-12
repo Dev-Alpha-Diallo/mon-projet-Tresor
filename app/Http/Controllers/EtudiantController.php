@@ -23,6 +23,10 @@ class EtudiantController extends Controller
         });
     }
 
+     if ($request->filled('chambre')) {
+        $query->where('chambre', $request->chambre);
+    }
+
     // Filtrer par maison
     if ($request->filled('maison_id')) {
         $query->where('maison_id', $request->maison_id);

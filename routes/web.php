@@ -50,8 +50,18 @@ Route::middleware('auth')->group(function () {
     // Gestion des bailleurs
     Route::resource('bailleurs', BailleurController::class);
 
-    // Gestion des paiements aux bailleurs
-    Route::resource('paiements-bailleurs', PaiementBailleurController::class);
+   // Route resource déjà gère index, create, store, etc.
+Route::resource('paiements-bailleurs', PaiementBailleurController::class);
+
+// PDF pour un paiement spécifique
+Route::get('/paiements-bailleurs/{paiement}/pdf', [PaiementBailleurController::class, 'generatePdf'])
+    ->name('paiements-bailleurs.generate-pdf');
+
+// Prévisualisation pour un paiement spécifique
+Route::get('/paiements-bailleurs/{paiement}/previsualiser', [PaiementBailleurController::class, 'previsualiser'])
+    ->name('paiements-bailleurs.previsualiser'); // ✅ pas index
+  
+
 
     // Gestion des rapports
     Route::prefix('rapports')->name('rapports.')->group(function () {
