@@ -9,67 +9,69 @@ use Illuminate\Http\Request;
 
 class FactureController extends Controller
 {
-   public function index()
-{
-    $factures = Facture::with('maison')
-        ->orderBy('date_paiement', 'desc')
-        ->paginate(20);
+    /**
+     * Afficher la liste des factures avec filtres facultatifs par mois/année
+     */
+    public function index(Request $request)
+    {
+        // Validation facultative des filtres
+        $validated = $request->validate([
+            'mois'  => 'nullable|integer|min:1|max:12',
+            'annee' => 'nullable|integer|min:2000|max:2100',
+        ]);
 
-        $factures = Facture::with('etudiant', 'maison')
-        ->whereMonth('date', $validated['mois'])
-        ->whereYear('date', $validated['annee'])
-        ->get();
+        // Requête de base
+        $query = Facture::with('maison')->orderBy('date_paiement', 'desc');
 
+        // Appliquer filtre si fourni
+        if (!empty($validated['mois']) && !empty($validated['annee'])) {
+            $query->whereMonth('date_paiement', $validated['mois'])
+                  ->whereYear('date_paiement', $validated['annee']);
+        }
 
-    // Statistiques globales
-    $totalFactures = Facture::count();
+        // Pagination
+        $factures = $query->paginate(20);
 
-    $facturesImpayees = Facture::where('statut', 'impayee')->count();
+        // Statistiques globales
+        $totalFactures = Facture::count();
+        $facturesImpayees = Facture::where('statut', 'impayee')->count();
+        $montantDu = Facture::where('statut', 'impayee')->sum('montant');
+        $facturesPayeesMois = Facture::where('statut', 'payee')
+            ->whereMonth('date_paiement', now()->month)
+            ->whereYear('date_paiement', now()->year)
+            ->count();
+        $montantTotal = Facture::sum('montant');
 
-    //  Montant total des factures impayées
-    $montantDu = Facture::where('statut', 'impayee')->sum('montant');
+        return view('factures.index', compact(
+            'factures',
+            'totalFactures',
+            'facturesImpayees',
+            'montantDu',
+            'facturesPayeesMois',
+            'montantTotal'
+        ));
+    }
 
-    //  Factures payées ce mois
-    $facturesPayeesMois = Facture::where('statut', 'payee')
-        ->whereMonth('date_paiement', now()->month)
-        ->whereYear('date_paiement', now()->year)
-        ->count();
+    /**
+     * Afficher le formulaire de création d'une facture
+     */
+    public function create()
+    {
+        $maisons = Maison::orderBy('nom')->get();
+        $etudiants = Etudiant::orderBy('nom')->get();
+        $types = [
+            'eau' => 'Eau',
+            'electricite' => 'Électricité',
+            'réparation' => 'Réparation',
+            'autre' => 'Autre',
+        ];
 
-    $montantTotal = Facture::sum('montant');
+        return view('factures.create', compact('maisons', 'etudiants', 'types'));
+    }
 
-    return view('factures.index', compact(
-        'factures',
-        'totalFactures',
-        'facturesImpayees',
-        'montantDu',
-        'facturesPayeesMois',
-        'montantTotal'
-    ));
-}
-
-
-   public function create()
-{
-    $maisons = Maison::orderBy('nom')->get();
-
-    $etudiants = Etudiant::orderBy('nom')->get();
-
-    $types = [
-        'eau' => 'Eau',
-        'electricite' => 'Électricité',
-        'réparation' => 'Réparation',
-        'autre' => 'Autre',
-    ];
-
-    return view('factures.create', [
-        'maisons'   => $maisons,
-        'etudiants' => $etudiants,
-        'types'     => $types,
-    ]);
-}
-
-
-
+    /**
+     * Enregistrer une nouvelle facture
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -87,14 +89,20 @@ class FactureController extends Controller
             ->with('success', 'Facture enregistrée avec succès.');
     }
 
+    /**
+     * Afficher le formulaire d'édition d'une facture
+     */
     public function edit(Facture $facture)
     {
         $maisons = Maison::all();
         $types = Facture::getTypes();
-        
+
         return view('factures.edit', compact('facture', 'maisons', 'types'));
     }
 
+    /**
+     * Mettre à jour une facture existante
+     */
     public function update(Request $request, Facture $facture)
     {
         $validated = $request->validate([
@@ -112,6 +120,9 @@ class FactureController extends Controller
             ->with('success', 'Facture modifiée avec succès.');
     }
 
+    /**
+     * Supprimer une facture
+     */
     public function destroy(Facture $facture)
     {
         $facture->delete();
@@ -120,11 +131,13 @@ class FactureController extends Controller
             ->with('success', 'Facture supprimée avec succès.');
     }
 
+    /**
+     * Générer un PDF pour une facture
+     */
     public function generatePdf(Facture $facture)
-{
-    // Exemple simple avec barryvdh/laravel-dompdf
-    $pdf = \PDF::loadView('factures.pdf', compact('facture'));
-    return $pdf->download('facture-' . $facture->id . '.pdf');
-}
-
+    {
+        // Exemple simple avec barryvdh/laravel-dompdf
+        $pdf = \PDF::loadView('factures.pdf', compact('facture'));
+        return $pdf->download('facture-' . $facture->id . '.pdf');
+    }
 }

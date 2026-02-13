@@ -9,10 +9,14 @@
             <span>←</span>
             <span>Retour à la facture</span>
         </a>
+
         <h1 class="text-2xl font-bold text-gray-800 mt-2">
             ✏️ Modifier Facture #{{ str_pad($facture->id, 6, '0', STR_PAD_LEFT) }}
         </h1>
-        <p class="text-gray-600 mt-1">Pour {{ $facture->etudiant->nom }}</p>
+
+        <p class="text-gray-600 mt-1">
+            Pour la maison : {{ $facture->maison->nom ?? 'Non spécifiée' }}
+        </p>
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
@@ -26,19 +30,21 @@
                 <div class="flex flex-wrap gap-3">
                     <label class="inline-flex items-center">
                         <input type="radio" name="statut" value="impayee" 
-                               {{ $facture->statut == 'impayee' ? 'checked' : '' }}
+                               {{ old('statut', $facture->statut) == 'impayee' ? 'checked' : '' }}
                                class="text-primary focus:ring-primary">
                         <span class="ml-2 text-gray-700">Impayée</span>
                     </label>
+
                     <label class="inline-flex items-center">
                         <input type="radio" name="statut" value="partiel" 
-                               {{ $facture->statut == 'partiel' ? 'checked' : '' }}
+                               {{ old('statut', $facture->statut) == 'partiel' ? 'checked' : '' }}
                                class="text-primary focus:ring-primary">
                         <span class="ml-2 text-gray-700">Partielle</span>
                     </label>
+
                     <label class="inline-flex items-center">
                         <input type="radio" name="statut" value="payee" 
-                               {{ $facture->statut == 'payee' ? 'checked' : '' }}
+                               {{ old('statut', $facture->statut) == 'payee' ? 'checked' : '' }}
                                class="text-primary focus:ring-primary">
                         <span class="ml-2 text-gray-700">Payée</span>
                     </label>
@@ -46,14 +52,18 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Étudiant (lecture seule) -->
+                <!-- Maison -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Étudiant</label>
-                    <div class="bg-gray-50 border border-gray-300 rounded-lg px-4 py-3">
-                        <div class="font-medium text-gray-900">{{ $facture->etudiant->nom }}</div>
-                        <div class="text-sm text-gray-600">Chambre {{ $facture->etudiant->chambre }}</div>
-                    </div>
-                    <p class="text-sm text-gray-500 mt-1">L'étudiant ne peut pas être modifié</p>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Maison *</label>
+                    <select name="maison_id" required
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="">Sélectionner une maison</option>
+                        @foreach($maisons as $maison)
+                            <option value="{{ $maison->id }}" {{ old('maison_id', $facture->maison_id) == $maison->id ? 'selected' : '' }}>
+                                {{ $maison->nom }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <!-- Mois -->
@@ -64,7 +74,7 @@
                            class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
                 </div>
 
-                <!-- Date échéance -->
+                <!-- Date d'échéance -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Date d'échéance *</label>
                     <input type="date" name="date_echeance" required
@@ -85,14 +95,14 @@
 
                 <!-- Type de facture -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Type de facture</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Type de facture *</label>
                     <select name="type"
                             class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
-                        <option value="loyer" {{ $facture->type == 'loyer' ? 'selected' : '' }}>Loyer</option>
-                        <option value="eau" {{ $facture->type == 'eau' ? 'selected' : '' }}>Facture d'eau</option>
-                        <option value="electricite" {{ $facture->type == 'electricite' ? 'selected' : '' }}>Facture d'électricité</option>
-                        <option value="internet" {{ $facture->type == 'internet' ? 'selected' : '' }}>Internet</option>
-                        <option value="divers" {{ $facture->type == 'divers' ? 'selected' : '' }}>Divers</option>
+                        @foreach($types as $key => $label)
+                            <option value="{{ $key }}" {{ old('type', $facture->type) == $key ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
 
@@ -104,7 +114,7 @@
                               placeholder="Détails supplémentaires...">{{ old('description', $facture->description) }}</textarea>
                 </div>
 
-                <!-- Remarques -->
+                <!-- Remarques internes -->
                 <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Remarques (interne)</label>
                     <textarea name="remarques" rows="2"
