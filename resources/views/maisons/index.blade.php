@@ -56,14 +56,14 @@
                             <form action="{{ route('maisons.destroy', $maison) }}" method="POST">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" 
+                                <!-- <button type="submit" 
                                         onclick="return confirm('Voulez-vous vraiment supprimer cette maison ?')" 
                                         class="flex items-center gap-1 text-xs px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-300 hover:text-white transition-all font-medium">
                                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M6 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 112 0v6a1 1 0 11-2 0V8zM4 5h12v1H4V5zm2-2h8l1 2H5l1-2z" clip-rule="evenodd"/>
                                     </svg>
                                     <span>Supprimer</span>
-                                </button>
+                                </button> -->
                             </form>
                         </td>
                     </tr>

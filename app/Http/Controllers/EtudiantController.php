@@ -11,39 +11,13 @@ class EtudiantController extends Controller
     /**
      * Affiche la liste des étudiants
      */
-  public function index(Request $request)
-{
-    $query = Etudiant::query()->with('maison');
-
-     // Filtrer par nom (recherche insensible à la casse)
-    if ($request->filled('nom')) {
-        $search = $request->nom;
-        $query->where(function($q) use ($search) {
-            $q->where('nom', 'ILIKE', "%{$search}%"); // ILIKE pour PostgreSQL insensible à la casse
-        });
+    public function index()
+    {
+        $etudiants = Etudiant::with('maison')->latest()->get();
+        $maisons = \App\Models\Maison::all();
+        
+        return view('etudiants.index', compact('etudiants', 'maisons'));
     }
-
-     if ($request->filled('chambre')) {
-        $query->where('chambre', $request->chambre);
-    }
-
-    // Filtrer par maison
-    if ($request->filled('maison_id')) {
-        $query->where('maison_id', $request->maison_id);
-    }
-
-    // Vérifie si tu veux tout récupérer (GET paramètre 'all=1'), sinon pagination par défaut
-    if ($request->filled('all') && $request->all == 1) {
-        $etudiants = $query->get(); // récupère tous les étudiants
-    } else {
-        $etudiants = $query->paginate(100); // par défaut 100 par page, tu peux ajuster
-    }
-
-    // Récupérer toutes les maisons pour le select
-    $maisons = Maison::all();
-
-    return view('etudiants.index', compact('etudiants', 'maisons'));
-}
 
     /**
      * Affiche le formulaire de création
@@ -126,5 +100,51 @@ class EtudiantController extends Controller
         }]);
         
         return view('etudiants.show', compact('etudiant'));
+    }
+
+    /**
+     * Exporte la liste de tous les étudiants en PDF
+     */
+    public function exportTous()
+    {
+        $etudiants = Etudiant::with(['maison.bailleur'])
+            ->orderBy('nom')
+            ->get();
+
+        $data = [
+            'titre' => 'Liste de tous les étudiants',
+            'etudiants' => $etudiants,
+            'nombreTotal' => $etudiants->count(),
+            'dateGeneration' => now()->format('d/m/Y à H:i'),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('etudiants.pdf.liste-complete', $data);
+        
+        return $pdf->download('liste_etudiants_' . date('Y-m-d') . '.pdf');
+    }
+
+    /**
+     * Exporte la liste des étudiants débiteurs en PDF
+     */
+    public function exportDebiteurs()
+    {
+        $etudiants = Etudiant::with(['maison.bailleur'])
+            ->get()
+            ->filter(fn($e) => $e->solde < 0)
+            ->sortBy('solde');
+
+        $totalDettes = abs($etudiants->sum('solde'));
+
+        $data = [
+            'titre' => 'Liste des étudiants débiteurs',
+            'etudiants' => $etudiants,
+            'nombreTotal' => $etudiants->count(),
+            'totalDettes' => $totalDettes,
+            'dateGeneration' => now()->format('d/m/Y à H:i'),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('etudiants.pdf.liste-debiteurs', $data);
+        
+        return $pdf->download('liste_debiteurs_' . date('Y-m-d') . '.pdf');
     }
 }

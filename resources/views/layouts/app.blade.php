@@ -69,7 +69,7 @@
                         </div>
                         <div class="hidden sm:flex flex-col">
                             <h1 class="text-base font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent leading-tight">C.E.T</h1>
-                            <p class="text-xs text-gray-900 -mt-0.5">Gestion</p>
+                            <p class="text-xs text-gray-900 -mt-0.5">Gestion De L'Amicale</p>
                         </div>
                     </a>
                 </div>
@@ -204,7 +204,7 @@
                         <svg class="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                         </svg>
-                        <span class="text-sm font-medium text-gray-700">© {{ date('Y') }} Trésorerie C.E.T</span>
+                        <span class="text-sm font-medium text-gray-700">© {{ date('Y') }} ALPHA OUMAR DIALLO  Trésorier C.E.T </span>
                     </div>
                     <div class="flex items-center space-x-6 text-xs text-gray-500">
                         <span class="flex items-center">

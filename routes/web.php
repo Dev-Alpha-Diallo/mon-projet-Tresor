@@ -34,8 +34,16 @@ Route::middleware('auth')->group(function () {
     // Gestion des étudiants
     Route::resource('etudiants', EtudiantController::class);
 
+    Route::prefix('etudiants')->name('etudiants.')->group(function () {
+    Route::get('/export/tous', [EtudiantController::class, 'exportTous'])->name('export.tous');
+    Route::get('/export/debiteurs', [EtudiantController::class, 'exportDebiteurs'])->name('export.debiteurs');
+});
+
     // Gestion des paiements
     Route::resource('paiements', PaiementController::class);
+
+    
+
 
     // Gestion des factures
     Route::resource('factures', FactureController::class);
@@ -51,10 +59,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('bailleurs', BailleurController::class);
 
    // Route resource déjà gère index, create, store, etc.
-Route::resource('paiements-bailleurs', PaiementBailleurController::class);
+    Route::resource('paiements-bailleurs', PaiementBailleurController::class);
 
-// PDF pour un paiement spécifique
-Route::get('/paiements-bailleurs/{paiement}/pdf', [PaiementBailleurController::class, 'generatePdf'])
+   // PDF pour un paiement spécifique
+    Route::get('/paiements-bailleurs/{paiement}/pdf', [PaiementBailleurController::class, 'generatePdf'])
     ->name('paiements-bailleurs.generate-pdf');
 
 // Prévisualisation pour un paiement spécifique

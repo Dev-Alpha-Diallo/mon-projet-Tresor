@@ -8,27 +8,20 @@
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-3xl font-bold text-gray-900">Tableau de bord</h1>
-            <p class="mt-1 text-sm text-gray-700">Vue d'ensemble de votre trésorerie</p>
+            <p class="mt-1 text-sm text-gray-500">Vue d'ensemble de votre trésorerie</p>
         </div>
-       <div class="flex items-center gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 
-            border border-blue-100 px-5 py-3 rounded-2xl shadow-sm w-fit">
+       <div class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl shadow-md">
     
-    <div class="text-2xl">
-        <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2-1.343-2-3-2zM12 14c-4.418 0-8 1.79-8 4v1h16v-1c0-2.21-3.582-4-8-4z"/>
-        </svg>
-    </div>
+            <svg class="w-5 h-5 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
 
-    <div>
-        <p class="text-xs text-blue-500 uppercase tracking-wider">
-            Aujourd'hui
-        </p>
-        <p class="text-sm font-bold text-gray-800">
-            {{ \Carbon\Carbon::now()->locale('fr')->isoFormat('dddd D MMMM YYYY') }}
-        </p>
-    </div>
+            <span class="text-sm font-semibold tracking-wide">
+                {{ \Carbon\Carbon::now()->locale('fr')->isoFormat('dddd D MMMM YYYY') }}
+            </span>
 
-</div>
+        </div>
 
     </div>
 
@@ -201,33 +194,47 @@
     <!-- Actions -->
     <div class="glass-effect rounded-2xl p-6 border border-gray-200/50">
         <h2 class="text-lg font-bold text-gray-900 mb-4">Actions rapides</h2>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <a href="{{ route('paiements.create') }}" class="group rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white hover:shadow-xl transition-all hover:scale-105">
                 <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                 </svg>
-                <p class="font-semibold">Paiement</p>
+                <p class="font-semibold text-sm">Paiement</p>
             </a>
 
             <a href="{{ route('factures.create') }}" class="group rounded-xl bg-gradient-to-br from-orange-500 to-red-600 p-6 text-white hover:shadow-xl transition-all hover:scale-105">
                 <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-                <p class="font-semibold">Creer Facture</p>
+                <p class="font-semibold text-sm"> Creer Facture</p>
             </a>
 
             <a href="{{ route('factures.index') }}" class="group rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 p-6 text-white hover:shadow-xl transition-all hover:scale-105">
                 <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-                <p class="font-semibold">Factures</p>
+                <p class="font-semibold text-sm">Factures</p>
             </a>
 
             <a href="{{ route('rapports.index') }}" class="group rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 p-6 text-white hover:shadow-xl transition-all hover:scale-105">
                 <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                 </svg>
-                <p class="font-semibold">Rapports</p>
+                <p class="font-semibold text-sm">Rapports</p>
+            </a>
+
+            <a href="{{ route('etudiants.export.tous') }}" class="group rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 p-6 text-white hover:shadow-xl transition-all hover:scale-105">
+                <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+                <p class="font-semibold text-sm">Liste tous</p>
+            </a>
+
+            <a href="{{ route('etudiants.export.debiteurs') }}" class="group rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 p-6 text-white hover:shadow-xl transition-all hover:scale-105">
+                <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <p class="font-semibold text-sm">Débiteurs</p>
             </a>
         </div>
     </div>

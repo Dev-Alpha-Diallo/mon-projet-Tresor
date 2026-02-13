@@ -15,15 +15,21 @@ class FactureController extends Controller
         ->orderBy('date_paiement', 'desc')
         ->paginate(20);
 
+        $factures = Facture::with('etudiant', 'maison')
+        ->whereMonth('date', $validated['mois'])
+        ->whereYear('date', $validated['annee'])
+        ->get();
+
+
     // Statistiques globales
     $totalFactures = Facture::count();
 
     $facturesImpayees = Facture::where('statut', 'impayee')->count();
 
-    // 💰 Montant total des factures impayées
+    //  Montant total des factures impayées
     $montantDu = Facture::where('statut', 'impayee')->sum('montant');
 
-    // ✅ Factures payées ce mois
+    //  Factures payées ce mois
     $facturesPayeesMois = Facture::where('statut', 'payee')
         ->whereMonth('date_paiement', now()->month)
         ->whereYear('date_paiement', now()->year)

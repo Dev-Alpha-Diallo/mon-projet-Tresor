@@ -90,7 +90,7 @@
                                     @csrf
                                     @method('DELETE')
 
-                                    <button type="submit"
+                                    <!-- <button type="submit"
                                             onclick="return confirm('Supprimer ce bailleur ?')"
                                             class="flex items-center gap-1 text-xs px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-300 hover:text-white transition-all font-medium">
                                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -99,7 +99,7 @@
                                                   clip-rule="evenodd"/>
                                         </svg>
                                         <span>Supprimer</span>
-                                    </button>
+                                    </button> -->
                                 </form>
 
                             </div>
