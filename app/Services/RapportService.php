@@ -6,6 +6,7 @@ use App\Models\Etudiant;
 use App\Models\Facture;
 use App\Models\Maison;
 use App\Models\Paiement;
+use App\Models\PaiementBailleur;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -24,7 +25,7 @@ class RapportService
         $data = $this->collecterDonneesMensuelles($mois, $annee);
         
         // Générer le PDF
-        $pdf = Pdf::loadView('rapports.mensuel', $data);
+        $pdf = Pdf::loadView('admin.rapports.mensuel', $data);
         
         // Créer le nom du fichier
         $nomFichier = sprintf('rapport_tresorerie_%04d_%02d.pdf', $annee, $mois);
@@ -48,30 +49,39 @@ class RapportService
         $dateDebut = Carbon::create($annee, $mois, 1)->startOfMonth();
         $dateFin = Carbon::create($annee, $mois, 1)->endOfMonth();
 
-        // Recettes : paiements étudiants du mois
-        $paiementsMois = Paiement::whereBetween('date_paiement', [$dateDebut, $dateFin])->get();
-        $totalRecettes = $paiementsMois->sum('montant');
+        // Recettes : utiliser agrégation SQL pour éviter de charger toutes les lignes
+        $totalRecettes = Paiement::whereBetween('date_paiement', [$dateDebut, $dateFin])->sum('montant');
 
-        // Dépenses : factures du mois
-        $facturesMois = Facture::whereBetween('date_paiement', [$dateDebut, $dateFin])->get();
-        $totalDepenses = $facturesMois->sum('montant');
+        // Dépenses : agrégation SQL
+        $totalDepenses = Facture::whereBetween('date_paiement', [$dateDebut, $dateFin])->sum('montant');
+        
+        // Paiements bailleurs
+        $totalPaiementsBailleurs = PaiementBailleur::whereBetween('date_paiement', [$dateDebut, $dateFin])->sum('montant');
 
-        // Dépenses par type
-        $depensesParType = $facturesMois->groupBy('type')->map(function ($factures) {
-            return $factures->sum('montant');
-        });
+        // Dépenses par type (clé => montant)
+        $depensesParType = Facture::whereBetween('date_paiement', [$dateDebut, $dateFin])
+            ->selectRaw('type, SUM(montant) as total')
+            ->groupBy('type')
+            ->pluck('total', 'type');
 
         // Solde début de mois (calculé sur les données jusqu'au mois précédent)
         $soldeDebut = $this->calculerSoldeJusquaDate($dateDebut->copy()->subDay());
-        $soldeFin = $soldeDebut + $totalRecettes - $totalDepenses;
+        $soldeFin = $soldeDebut + $totalRecettes - $totalDepenses - $totalPaiementsBailleurs;
 
-        // Étudiants débiteurs et créditeurs
-        $etudiants = Etudiant::with('maison')->get();
-        $etudiantsDebiteurs = $etudiants->filter(fn($e) => $e->isDebiteur())->sortBy('solde');
-        $etudiansCrediteurs = $etudiants->filter(fn($e) => $e->isCrediteur())->sortByDesc('solde');
+        // Calculer statistiques d'étudiants via helper (streaming interne)
+        $stats = $this->computeEtudiantsStats(1000, 1000);
+        $nombreEtudiants = $stats['nombreEtudiants'];
+        $nombreDebiteurs = $stats['nombreDebiteurs'];
+        $nombreCrediteurs = $stats['nombreCrediteurs'];
+        $totalDettes = $stats['totalDettes'];
+        $totalAvances = $stats['totalAvances'];
+        $etudiantsDebiteurs = $stats['etudiantsDebiteurs'];
+        $etudiantsCrediteurs = $stats['etudiantsCrediteurs'];
 
-        // Situation par maison
-        $maisons = Maison::with(['bailleur', 'etudiants'])->get();
+        // Situation par maison : charger relations nécessaires et compter étudiants (maisons attendues petites)
+        $maisons = Maison::with('bailleur')
+            ->withCount('etudiants')
+            ->get();
 
         return [
             'mois' => $mois,
@@ -81,12 +91,26 @@ class RapportService
             
             // Recettes
             'totalRecettes' => $totalRecettes,
-            'paiementsMois' => $paiementsMois,
+            // Pour la liste détaillée dans le PDF on récupère un jeu limité de colonnes
+            'paiementsMois' => Paiement::whereBetween('date_paiement', [$dateDebut, $dateFin])
+                                ->with('etudiant')
+                                ->orderBy('date_paiement')
+                                ->get(['id','etudiant_id','montant','date_paiement']),
             
             // Dépenses
             'totalDepenses' => $totalDepenses,
-            'facturesMois' => $facturesMois,
+            'facturesMois' => Facture::whereBetween('date_paiement', [$dateDebut, $dateFin])
+                                ->with('maison')
+                                ->orderBy('date_paiement')
+                                ->get(['id','maison_id','montant','date_paiement','type']),
             'depensesParType' => $depensesParType,
+            
+            // Paiements bailleurs
+            'totalPaiementsBailleurs' => $totalPaiementsBailleurs,
+            'paiementsBailleursMois' => PaiementBailleur::whereBetween('date_paiement', [$dateDebut, $dateFin])
+                                ->with('maison')
+                                ->orderBy('date_paiement')
+                                ->get(['id', 'maison_id', 'montant', 'date_paiement']),
             
             // Synthèse
             'soldeDebut' => $soldeDebut,
@@ -95,7 +119,12 @@ class RapportService
             
             // Étudiants
             'etudiantsDebiteurs' => $etudiantsDebiteurs,
-            'etudiantsCrediteurs' => $etudiansCrediteurs,
+            'etudiantsCrediteurs' => $etudiantsCrediteurs,
+            'nombreEtudiants' => $nombreEtudiants,
+            'nombreDebiteurs' => $nombreDebiteurs,
+            'nombreCrediteurs' => $nombreCrediteurs,
+            'totalDettes' => abs($totalDettes),
+            'totalAvances' => $totalAvances,
             
             // Maisons
             'maisons' => $maisons,
@@ -123,26 +152,33 @@ class RapportService
      */
     public function getDonneesDashboard(): array
     {
-        $etudiants = Etudiant::with('maison')->get();
-        $maisons = Maison::with(['bailleur', 'etudiants'])->get();
-        
+        // Synthèses rapides sans charger toutes les entités
         $totalRecettes = Paiement::sum('montant');
         $totalDepenses = Facture::sum('montant');
         $soldeCaisse = $totalRecettes - $totalDepenses;
-        
-        $etudiantsDebiteurs = $etudiants->filter(fn($e) => $e->isDebiteur());
-        $etudiantsCrediteurs = $etudiants->filter(fn($e) => $e->isCrediteur());
-        
+
+        // Calculer stats d'étudiants (top 20 pour dashboard)
+        $stats = $this->computeEtudiantsStats(20, 20, 20);
+        $nombreEtudiants = $stats['nombreEtudiants'];
+        $nombreDebiteurs = $stats['nombreDebiteurs'];
+        $nombreCrediteurs = $stats['nombreCrediteurs'];
+        $etudiantsDebiteurs = $stats['etudiantsDebiteurs'];
+        $etudiantsCrediteurs = $stats['etudiantsCrediteurs'];
+
+        $maisons = Maison::with('bailleur')->withCount('etudiants')->get();
+
         return [
             'soldeCaisse' => $soldeCaisse,
             'totalRecettes' => $totalRecettes,
             'totalDepenses' => $totalDepenses,
-            'nombreEtudiants' => $etudiants->count(),
-            'nombreDebiteurs' => $etudiantsDebiteurs->count(),
-            'nombreCrediteurs' => $etudiantsCrediteurs->count(),
-            'totalDettes' => abs($etudiantsDebiteurs->sum('solde')),
-            'totalAvances' => $etudiantsCrediteurs->sum('solde'),
+            'nombreEtudiants' => $nombreEtudiants,
+            'nombreDebiteurs' => $nombreDebiteurs,
+            'nombreCrediteurs' => $nombreCrediteurs,
+            'totalDettes' => $stats['totalDettes'],
+            'totalAvances' => $stats['totalAvances'],
             'maisons' => $maisons,
+            'etudiantsDebiteurs' => $etudiantsDebiteurs,
+            'etudiantsCrediteurs' => $etudiantsCrediteurs,
         ];
     }
 
@@ -153,7 +189,7 @@ class RapportService
     {
         $data = $this->collecterDonneesTrimestrielles($trimestre, $annee);
         
-        $pdf = Pdf::loadView('rapports.trimestriel', $data);
+        $pdf = Pdf::loadView('admin.rapports.trimestriel', $data);
         
         $nomFichier = sprintf('rapport_trimestriel_%04d_T%d.pdf', $annee, $trimestre);
         $cheminComplet = 'reports/' . $nomFichier;
@@ -176,31 +212,22 @@ class RapportService
         $dateFin = Carbon::create($annee, $moisFin, 1)->endOfMonth();
 
         // Paiements du trimestre
-        $paiements = Paiement::whereBetween('date_paiement', [$dateDebut, $dateFin])
-            ->with('etudiant.maison')
-            ->orderBy('date_paiement')
-            ->get();
-        
-        $totalRecettes = $paiements->sum('montant');
+        // Pour le trimestre, utiliser agrégations pour totaux et limiter les listes récupérées
+        $totalRecettes = Paiement::whereBetween('date_paiement', [$dateDebut, $dateFin])->sum('montant');
 
         // Factures du trimestre
-        $factures = Facture::whereBetween('date_paiement', [$dateDebut, $dateFin])
-            ->with('maison')
-            ->orderBy('date_paiement')
-            ->get();
-        
-        $totalDepenses = $factures->sum('montant');
+        $totalDepenses = Facture::whereBetween('date_paiement', [$dateDebut, $dateFin])->sum('montant');
 
         // Solde
         $soldeCaisse = $totalRecettes - $totalDepenses;
 
-        // Étudiants
-        $etudiants = Etudiant::with('maison')->get();
-        $etudiantsDebiteurs = $etudiants->filter(fn($e) => $e->solde < 0);
-        $etudiantsCrediteurs = $etudiants->filter(fn($e) => $e->solde > 0);
+        // Étudiants (listes limitées via streaming)
+        $stats = $this->computeEtudiantsStats(1000, 1000);
+        $etudiantsDebiteurs = $stats['etudiantsDebiteurs'];
+        $etudiantsCrediteurs = $stats['etudiantsCrediteurs'];
 
-        // Maisons
-        $maisons = Maison::with(['bailleur', 'etudiants'])->get();
+        // Maisons (chargement léger)
+        $maisons = Maison::with('bailleur')->withCount('etudiants')->get();
 
         $nomsMois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
                      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -214,18 +241,25 @@ class RapportService
             'periode' => "$periodeDebut - $periodeFin $annee",
             'dateDebut' => $dateDebut,
             'dateFin' => $dateFin,
-            'paiements' => $paiements,
-            'factures' => $factures,
+            // pour listes détaillées (PDF) on charge un ensemble raisonnable de colonnes
+            'paiements' => Paiement::whereBetween('date_paiement', [$dateDebut, $dateFin])
+                            ->with('etudiant')
+                            ->orderBy('date_paiement')
+                            ->get(['id','etudiant_id','montant','date_paiement']),
+            'factures' => Facture::whereBetween('date_paiement', [$dateDebut, $dateFin])
+                            ->with('maison')
+                            ->orderBy('date_paiement')
+                            ->get(['id','maison_id','montant','date_paiement','type']),
             'totalRecettes' => $totalRecettes,
             'totalDepenses' => $totalDepenses,
             'soldeCaisse' => $soldeCaisse,
             'etudiantsDebiteurs' => $etudiantsDebiteurs,
             'etudiantsCrediteurs' => $etudiantsCrediteurs,
-            'nombreEtudiants' => $etudiants->count(),
-            'nombreDebiteurs' => $etudiantsDebiteurs->count(),
-            'nombreCrediteurs' => $etudiantsCrediteurs->count(),
-            'totalDettes' => abs($etudiantsDebiteurs->sum('solde')),
-            'totalAvances' => $etudiantsCrediteurs->sum('solde'),
+            'nombreEtudiants' => $stats['nombreEtudiants'],
+            'nombreDebiteurs' => $stats['nombreDebiteurs'],
+            'nombreCrediteurs' => $stats['nombreCrediteurs'],
+            'totalDettes' => $stats['totalDettes'],
+            'totalAvances' => $stats['totalAvances'],
             'maisons' => $maisons,
         ];
     }
@@ -237,7 +271,7 @@ class RapportService
     {
         $data = $this->collecterDonneesAnnuelles($annee);
         
-        $pdf = Pdf::loadView('rapports.annuel', $data);
+        $pdf = Pdf::loadView('admin.rapports.annuel', $data);
         
         $nomFichier = sprintf('rapport_annuel_%04d.pdf', $annee);
         $cheminComplet = 'reports/' . $nomFichier;
@@ -256,20 +290,11 @@ class RapportService
         $dateFin = Carbon::create($annee, 12, 31)->endOfYear();
 
         // Paiements de l'année
-        $paiements = Paiement::whereBetween('date_paiement', [$dateDebut, $dateFin])
-            ->with('etudiant.maison')
-            ->orderBy('date_paiement')
-            ->get();
-        
-        $totalRecettes = $paiements->sum('montant');
+        // Année complète: utiliser agrégations pour totaux; générer statistiques mensuelles par somme
+        $totalRecettes = Paiement::whereBetween('date_paiement', [$dateDebut, $dateFin])->sum('montant');
 
         // Factures de l'année
-        $factures = Facture::whereBetween('date_paiement', [$dateDebut, $dateFin])
-            ->with('maison')
-            ->orderBy('date_paiement')
-            ->get();
-        
-        $totalDepenses = $factures->sum('montant');
+        $totalDepenses = Facture::whereBetween('date_paiement', [$dateDebut, $dateFin])->sum('montant');
 
         // Solde
         $soldeCaisse = $totalRecettes - $totalDepenses;
@@ -292,33 +317,88 @@ class RapportService
             ];
         }
 
-        // Étudiants
-        $etudiants = Etudiant::with('maison')->get();
-        $etudiantsDebiteurs = $etudiants->filter(fn($e) => $e->solde < 0);
-        $etudiantsCrediteurs = $etudiants->filter(fn($e) => $e->solde > 0);
+        // Étudiants (listes limitées via streaming)
+        $stats = $this->computeEtudiantsStats(1000, 1000);
+        $etudiantsDebiteurs = $stats['etudiantsDebiteurs'];
+        $etudiantsCrediteurs = $stats['etudiantsCrediteurs'];
 
-        // Maisons
-        $maisons = Maison::with(['bailleur', 'etudiants'])->get();
+        // Maisons (chargement léger)
+        $maisons = Maison::with('bailleur')->withCount('etudiants')->get();
 
         return [
             'annee' => $annee,
             'periode' => "Année $annee",
             'dateDebut' => $dateDebut,
             'dateFin' => $dateFin,
-            'paiements' => $paiements,
-            'factures' => $factures,
+            // listes détaillées
+            'paiements' => Paiement::whereBetween('date_paiement', [$dateDebut, $dateFin])
+                            ->with('etudiant')
+                            ->orderBy('date_paiement')
+                            ->get(['id','etudiant_id','montant','date_paiement']),
+            'factures' => Facture::whereBetween('date_paiement', [$dateDebut, $dateFin])
+                            ->with('maison')
+                            ->orderBy('date_paiement')
+                            ->get(['id','maison_id','montant','date_paiement','type']),
             'totalRecettes' => $totalRecettes,
             'totalDepenses' => $totalDepenses,
             'soldeCaisse' => $soldeCaisse,
             'statistiquesMensuelles' => $statistiquesMensuelles,
             'etudiantsDebiteurs' => $etudiantsDebiteurs,
             'etudiantsCrediteurs' => $etudiantsCrediteurs,
-            'nombreEtudiants' => $etudiants->count(),
-            'nombreDebiteurs' => $etudiantsDebiteurs->count(),
-            'nombreCrediteurs' => $etudiantsCrediteurs->count(),
-            'totalDettes' => abs($etudiantsDebiteurs->sum('solde')),
-            'totalAvances' => $etudiantsCrediteurs->sum('solde'),
+            'nombreEtudiants' => $stats['nombreEtudiants'],
+            'nombreDebiteurs' => $stats['nombreDebiteurs'],
+            'nombreCrediteurs' => $stats['nombreCrediteurs'],
+            'totalDettes' => $stats['totalDettes'],
+            'totalAvances' => $stats['totalAvances'],
             'maisons' => $maisons,
+        ];
+    }
+
+    /**
+     * Calcule des statistiques d'étudiants en streaming (utile car `solde` est un accessor)
+     * Retourne counts, totaux et listes limitées de débiteurs/créditeurs.
+     */
+    private function computeEtudiantsStats(int $limitDeb = 1000, int $limitCred = 1000, int $limitForLists = null): array
+    {
+        $nombreEtudiants = 0;
+        $nombreDebiteurs = 0;
+        $nombreCrediteurs = 0;
+        $totalDettes = 0;
+        $totalAvances = 0;
+        $etudiantsDebiteurs = collect();
+        $etudiantsCrediteurs = collect();
+
+        if (is_null($limitForLists)) {
+            $limitForLists = max($limitDeb, $limitCred);
+        }
+
+        foreach (Etudiant::with('maison')->cursor() as $e) {
+            $nombreEtudiants++;
+            $s = $e->solde;
+            if ($s < 0) {
+                $nombreDebiteurs++;
+                $totalDettes += $s; // négatif
+                if ($etudiantsDebiteurs->count() < $limitDeb) {
+                    $etudiantsDebiteurs->push($e);
+                }
+            } elseif ($s > 0) {
+                $nombreCrediteurs++;
+                $totalAvances += $s;
+                if ($etudiantsCrediteurs->count() < $limitCred) {
+                    $etudiantsCrediteurs->push($e);
+                }
+            }
+            // arrêter si les deux listes ont atteint la taille demandée et qu'on ne veut pas compter plus ?
+        }
+
+        return [
+            'nombreEtudiants' => $nombreEtudiants,
+            'nombreDebiteurs' => $nombreDebiteurs,
+            'nombreCrediteurs' => $nombreCrediteurs,
+            'totalDettes' => abs($totalDettes),
+            'totalAvances' => $totalAvances,
+            'etudiantsDebiteurs' => $etudiantsDebiteurs,
+            'etudiantsCrediteurs' => $etudiantsCrediteurs,
         ];
     }
 }

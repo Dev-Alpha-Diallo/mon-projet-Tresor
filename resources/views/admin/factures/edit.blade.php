@@ -1,0 +1,154 @@
+@extends('layouts.app')
+
+@section('title', 'Modifier Facture #' . $facture->id)
+
+@section('content')
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+        <a href="{{ route('admin.factures.show', $facture) }}" class="text-primary hover:text-primary-dark flex items-center space-x-2">
+            <span>←</span>
+            <span>Retour à la facture</span>
+        </a>
+
+        <h1 class="text-2xl font-bold text-gray-800 mt-2">
+            ✏️ Modifier Facture #{{ str_pad($facture->id, 6, '0', STR_PAD_LEFT) }}
+        </h1>
+
+        <p class="text-gray-600 mt-1">
+            Pour la maison : {{ $facture->maison->nom ?? 'Non spécifiée' }}
+        </p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <form action="{{ route('admin.factures.update', $facture) }}" method="POST">
+            @csrf
+            @method('PUT')
+
+            <!-- Statut -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Statut de la facture</label>
+                <div class="flex flex-wrap gap-3">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="statut" value="impayee" 
+                               {{ old('statut', $facture->statut) == 'impayee' ? 'checked' : '' }}
+                               class="text-primary focus:ring-primary">
+                        <span class="ml-2 text-gray-700">Impayée</span>
+                    </label>
+
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="statut" value="partiel" 
+                               {{ old('statut', $facture->statut) == 'partiel' ? 'checked' : '' }}
+                               class="text-primary focus:ring-primary">
+                        <span class="ml-2 text-gray-700">Partielle</span>
+                    </label>
+
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="statut" value="payee" 
+                               {{ old('statut', $facture->statut) == 'payee' ? 'checked' : '' }}
+                               class="text-primary focus:ring-primary">
+                        <span class="ml-2 text-gray-700">Payée</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Maison -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Maison *</label>
+                    <select name="maison_id" required
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="">Sélectionner une maison</option>
+                        @foreach($maisons as $maison)
+                            <option value="{{ $maison->id }}" {{ old('maison_id', $facture->maison_id) == $maison->id ? 'selected' : '' }}>
+                                {{ $maison->nom }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Mois -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Mois de la facture *</label>
+                    <input type="month" name="mois" required
+                           value="{{ old('mois', $facture->mois) }}"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+
+                <!-- Date d'échéance -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date d'échéance *</label>
+                    <input type="date" name="date_echeance" required
+                           value="{{ old('date_echeance', $facture->date_echeance) }}"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+
+                <!-- Montant -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Montant (FCFA) *</label>
+                    <div class="relative">
+                        <input type="number" name="montant" required step="0.01"
+                               value="{{ old('montant', $facture->montant) }}"
+                               class="w-full border border-gray-300 rounded-lg px-4 py-3 pl-10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <span class="absolute left-3 top-3 text-gray-500">F</span>
+                    </div>
+                </div>
+
+                <!-- Type de facture -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Type de facture *</label>
+                    <select name="type"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                        @foreach($types as $key => $label)
+                            <option value="{{ $key }}" {{ old('type', $facture->type) == $key ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Description -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea name="description" rows="3"
+                              class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                              placeholder="Détails supplémentaires...">{{ old('description', $facture->description) }}</textarea>
+                </div>
+
+                <!-- Remarques internes -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Remarques (interne)</label>
+                    <textarea name="remarques" rows="2"
+                              class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                              placeholder="Notes internes...">{{ old('remarques', $facture->remarques) }}</textarea>
+                </div>
+            </div>
+
+            <!-- Boutons -->
+            <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+                <form action="{{ route('admin.factures.destroy', $facture) }}" method="POST" 
+                      onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette facture ?');">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit"
+                            class="text-red-600 hover:text-red-800 font-medium flex items-center space-x-2">
+                        <span>🗑️</span>
+                        <span>Supprimer la facture</span>
+                    </button>
+                </form>
+
+                <div class="flex space-x-3">
+                    <a href="{{ route('admin.factures.show', $facture) }}" 
+                       class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition">
+                        Annuler
+                    </a>
+                    <button type="submit"
+                            class="bg-gradient-to-r from-primary to-primary-dark text-white px-6 py-3 rounded-lg font-medium hover:shadow-md transition flex items-center space-x-2">
+                        <span>💾</span>
+                        <span>Mettre à jour</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+@endsection

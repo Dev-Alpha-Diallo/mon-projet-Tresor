@@ -31,6 +31,18 @@ services:
     networks:
       - tresorerie-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: tresorerie-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - tresorerie-network
+    command: redis-server --appendonly yes
+
   nginx:
     image: nginx:latest
     container_name: tresorerie-nginx
@@ -44,9 +56,11 @@ services:
       - tresorerie-network
     depends_on:
       - app
+      - redis
 
 volumes:
   pgdata:
+  redis-data:
 
 networks:
   tresorerie-network:
