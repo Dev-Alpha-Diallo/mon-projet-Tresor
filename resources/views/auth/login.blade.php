@@ -95,8 +95,18 @@
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p class="text-sm text-blue-900 font-semibold mb-2">🔐 Accès local</p>
                     <p class="text-sm text-blue-800">Pour vous connecter, utilisez :</p>
-                    <p class="text-xs text-blue-700 font-mono mt-2">Email: admin@treso.local</p>
-                    <p class="text-xs text-blue-700 font-mono">Mdp: password</p>
+                    <div class="flex flex-col gap-2 mt-2">
+                        <div>
+                            <span class="font-semibold text-blue-700">Admin :</span>
+                            <span class="text-xs font-mono">admin@treso.local</span>
+                            <span class="text-xs font-mono ml-2">Mdp: password</span>
+                        </div>
+                        <div>
+                            <span class="font-semibold text-blue-700">Client :</span>
+                            <span class="text-xs font-mono">client@treso.local</span>
+                            <span class="text-xs font-mono ml-2">Mdp: motdepasse</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

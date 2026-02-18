@@ -13,13 +13,21 @@
             @csrf
 
             <div class="space-y-4">
-                <!-- Étudiant (recherche asynchrone) -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Étudiant</label>
-                    <input type="hidden" name="etudiant_id" id="etudiant_id" value="{{ old('etudiant_id', $selected->id ?? '') }}">
-                    <input id="etudiant_search" type="text" placeholder="Rechercher un étudiant..." value="{{ old('etudiant_name', $selected ? ($selected->nom . ' - ' . ($selected->maison->nom ?? '') . ' (Ch ' . $selected->chambre . ')') : '') }}"
+                <!-- Étudiant -->
+                <div class="relative">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Étudiant <span class="text-red-500">*</span></label>
+                    
+                    <input type="hidden" name="etudiant_id" id="etudiant_id" value="{{ old('etudiant_id') }}" required>
+                    
+                    <input 
+                        id="search" 
+                        type="text" 
+                        placeholder="Cliquez pour voir la liste ou tapez pour rechercher..." 
+                        autocomplete="off"
                         class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <div id="etudiant_suggestions" class="border rounded bg-white mt-1 hidden z-50"></div>
+                    
+                    <div id="list" class="absolute z-50 w-full bg-white border rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                    
                     @error('etudiant_id')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
@@ -35,7 +43,7 @@
                     @enderror
                 </div>
 
-                <!-- Date de paiement -->
+                <!-- Date -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Date de paiement</label>
                     <input type="date" name="date_paiement" value="{{ old('date_paiement', date('Y-m-d')) }}" required
@@ -45,15 +53,15 @@
                     @enderror
                 </div>
 
-                <!-- Moyen de paiement -->
+                <!-- Moyen -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Moyen de paiement</label>
                     <select name="moyen_paiement" required
                         class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
                         <option value="">Sélectionner</option>
-                        <option value="especes" {{ old('moyen_paiement') == 'especes' ? 'selected' : '' }}>Espèces</option>
-                        <option value="mobile_money" {{ old('moyen_paiement') == 'mobile_money' ? 'selected' : '' }}>Mobile Money</option>
-                        <option value="virement" {{ old('moyen_paiement') == 'virement' ? 'selected' : '' }}>Virement</option>
+                        <option value="especes">Espèces</option>
+                        <option value="mobile_money">Mobile Money</option>
+                        <option value="virement">Virement</option>
                     </select>
                     @error('moyen_paiement')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -65,60 +73,71 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Remarque (optionnel)</label>
                     <textarea name="remarque" rows="3"
                         class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">{{ old('remarque') }}</textarea>
-                    @error('remarque')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
                 </div>
             </div>
 
             <div class="flex space-x-4 mt-6">
-                <button type="submit" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg transition-all duration-200">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
                     Enregistrer
                 </button>
-                <a href="{{ route('admin.paiements.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1.5 rounded-lg">
+                <a href="{{ route('admin.paiements.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg">
                     Annuler
                 </a>
             </div>
         </form>
     </div>
 </div>
-@endsection
 
-@push('scripts')
 <script>
-(function(){
-    const searchInput = document.getElementById('etudiant_search');
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('search');
     const hidden = document.getElementById('etudiant_id');
-    const suggestions = document.getElementById('etudiant_suggestions');
-    const url = "{{ route('admin.etudiants.search') }}";
+    const list = document.getElementById('list');
+    let timer, data = [];
 
-    let debounceTimer = null;
-
-    function renderList(items){
-        if(!items.length){ suggestions.classList.add('hidden'); suggestions.innerHTML=''; return; }
-        suggestions.innerHTML = items.map(i => `<div class="px-3 py-2 hover:bg-gray-100 cursor-pointer" data-id="${i.id}">${i.text}</div>`).join('');
-        suggestions.classList.remove('hidden');
+    function show(items) {
+        if(!items.length) {
+            list.innerHTML = '<div class="p-3 text-gray-500">Aucun</div>';
+        } else {
+            list.innerHTML = items.map(i => 
+                '<div class="p-3 hover:bg-blue-50 cursor-pointer border-b" data-id="'+i.id+'">'+
+                '<div class="font-bold">'+i.nom+'</div>'+
+                '<div class="text-sm text-gray-600">'+i.maison+' - Ch '+i.chambre+'</div>'+
+                '</div>'
+            ).join('');
+        }
+        list.classList.remove('hidden');
     }
 
-    searchInput.addEventListener('input', function(e){
-        const q = this.value.trim();
-        clearTimeout(debounceTimer);
-        if(q.length < 1){ suggestions.classList.add('hidden'); hidden.value=''; return; }
-        debounceTimer = setTimeout(()=>{
-            fetch(url + '?q=' + encodeURIComponent(q), {headers:{'X-Requested-With':'XMLHttpRequest'}})
-                .then(r => r.json())
-                .then(data => renderList(data))
-                .catch(()=>{ suggestions.classList.add('hidden'); });
-        }, 250);
+    function load(q) {
+        fetch("{{ route('admin.etudiants.search') }}?q="+encodeURIComponent(q))
+            .then(r => r.json())
+            .then(d => { data = d; show(d); })
+            .catch(e => {
+                console.error(e);
+                list.innerHTML = '<div class="p-3 text-red-500">Erreur</div>';
+                list.classList.remove('hidden');
+            });
+    }
+
+    input.addEventListener('focus', () => data.length ? show(data) : load(''));
+    input.addEventListener('input', function() {
+        clearTimeout(timer);
+        timer = setTimeout(() => load(this.value.trim()), 300);
     });
 
-    suggestions.addEventListener('click', function(e){
+    list.addEventListener('click', function(e) {
         const el = e.target.closest('[data-id]');
-        if(!el) return;
-        hidden.value = el.getAttribute('data-id');
-        searchInput.value = el.textContent.trim();
-        suggestions.classList.add('hidden');
+        if(el) {
+            hidden.value = el.dataset.id;
+            input.value = el.querySelector('.font-bold').textContent;
+            list.classList.add('hidden');
+        }
     });
-})();
+
+    document.addEventListener('click', e => {
+        if(!input.contains(e.target) && !list.contains(e.target)) list.classList.add('hidden');
+    });
+});
 </script>
-@endpush
+@endsection

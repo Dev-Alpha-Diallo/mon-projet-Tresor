@@ -88,4 +88,10 @@ class Etudiant extends Model
     {
         return $this->solde > 0;
     }
+
+    public function parents()
+    {
+        return $this->hasMany(ParentTuteur::class);
+    }
+
 }

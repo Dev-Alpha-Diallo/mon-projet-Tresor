@@ -124,77 +124,30 @@ class EtudiantController extends Controller
      * Recherche floue (fuzzy) JSON pour selects asynchrones
      * Tolère les fautes de frappe, casse et diacritiques
      */
-    public function search(Request $request)
+     public function search(Request $request)
     {
-        $q = $request->query('q', '');
-        $maison = $request->query('maison_id');
-        $minScore = 0.60; // Seuil Levenshtein (0-1)
-
-        $query = Etudiant::with('maison')->orderBy('nom');
-
-        // Filtre maison au niveau DB
-        if ($maison) {
-            $query->where('maison_id', $maison);
-        }
-
-        // Récupérer ensemble plus large pour fuzzy filtering en PHP
-        $allResults = $query->limit(150)->get();
-
-        // Normaliser la requête UNE FOIS pour comparaison unicode-safe
-        if ($q !== '') {
-            $q_normalized = mb_strtolower(trim($q), 'UTF-8');
-
-            // Fuzzy match avec approche Unicode-safe
-            $allResults = $allResults->filter(function ($e) use ($q_normalized, $minScore) {
-                $nom = $e->nom ?? '';
-                $maison_name = $e->maison->nom ?? '';
-                $chambre = trim($e->chambre ?? '');
-
-                // Normaliser pour comparaison (minuscules, UTF-8 safe)
-                $nom_lower = mb_strtolower($nom, 'UTF-8');
-                $maison_lower = mb_strtolower($maison_name, 'UTF-8');
-                $chambre_lower = mb_strtolower($chambre, 'UTF-8');
-
-                // 1. Recherche par substring simple (case-insensitive)
-                if (mb_strpos($nom_lower, $q_normalized) !== false) {
-                    return true;
-                }
-                if (mb_strpos($maison_lower, $q_normalized) !== false) {
-                    return true;
-                }
-                if (mb_strpos($chambre_lower, $q_normalized) !== false) {
-                    return true;
-                }
-
-                // 2. Distance Levenshtein (tolérer typos)
-                if (strlen($q_normalized) >= 2) {
-                    $sim = 1.0 - (levenshtein($q_normalized, $nom_lower) / max(strlen($q_normalized), strlen($nom_lower), 1));
-                    if ($sim >= $minScore) {
-                        return true;
-                    }
-                }
-
-                return false;
-            });
-
-            // Trier par pertinence (débuts d'abord)
-            $allResults = $allResults->sort(function ($a, $b) use ($q_normalized) {
-                $a_nom = mb_strtolower($a->nom, 'UTF-8');
-                $b_nom = mb_strtolower($b->nom, 'UTF-8');
-                
-                $a_starts = mb_strpos($a_nom, $q_normalized) === 0 ? 1 : 0;
-                $b_starts = mb_strpos($b_nom, $q_normalized) === 0 ? 1 : 0;
-                
-                return $b_starts <=> $a_starts;
+        $q = $request->get('q', '');
+        
+        $query = Etudiant::with('maison');
+        
+        if (strlen($q) > 0) {
+            $query->where(function($query) use ($q) {
+                $query->where('nom', 'ILIKE', "%{$q}%")
+                      ->orWhere('chambre', 'ILIKE', "%{$q}%");
             });
         }
+        
+        $etudiants = $query->orderBy('nom')->limit(50)->get();
 
-        $results = $allResults->limit(20)->map(function ($e) {
+        $results = $etudiants->map(function($e) {
             return [
                 'id' => $e->id,
-                'text' => $e->nom . ' - ' . ($e->maison->nom ?? 'N/A') . ' (Ch ' . $e->chambre . ')'
+                'nom' => $e->nom,
+                'maison' => $e->maison ? $e->maison->nom : 'N/A',
+                'chambre' => $e->chambre,
+                'solde' => $e->solde ?? 0,
             ];
-        })->values();
+        });
 
         return response()->json($results);
     }
