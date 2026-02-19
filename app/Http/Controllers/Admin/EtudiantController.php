@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Etudiant;
 use App\Models\Maison;
 use Illuminate\Http\Request;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 class EtudiantController extends Controller
 {
@@ -14,7 +16,7 @@ class EtudiantController extends Controller
      */
     public function index()
     {
-        $query = Etudiant::with('maison')->latest();
+        $query = Etudiant::with(['maison', 'paiements'])->latest();
 
         // Filtres depuis la requête (case-insensitive pour nom)
         if(request()->filled('nom')){
@@ -37,6 +39,8 @@ class EtudiantController extends Controller
         return view('admin.etudiants.index', compact('etudiants', 'maisons'));
     }
 
+
+
     /**
      * Affiche le formulaire de création
      */
@@ -50,23 +54,45 @@ class EtudiantController extends Controller
     /**
      * Enregistre un nouvel étudiant
      */
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'nom' => 'required|string|max:255',
-            'filiere' => 'required|string|max:255',
-            'maison_id' => 'required|exists:maisons,id',
-            'chambre' => 'required|string|max:50',
-            'loyer_mensuel' => 'required|numeric|min:0',
-            'date_debut' => 'required|date',
-        ]);
+   // Dans Admin/EtudiantController.php
 
-        Etudiant::create($validated);
 
-        return redirect()->route('admin.etudiants.index')
-            ->with('success', 'Étudiant ajouté avec succès.');
-    }
+public function store(Request $request)
+{
+    $request->validate([
+        'nom'           => 'required|string|max:255',
+        'telephone'     => 'required|string|unique:etudiants,telephone|unique:users,telephone',
+        'filiere'       => 'required|string|max:255',
+        'maison_id'     => 'required|exists:maisons,id',
+        'chambre'       => 'required|string|max:50',
+        'loyer_mensuel' => 'required|numeric|min:0',
+        'date_debut'    => 'required|date',
+    ]);
 
+    // Créer le user avec téléphone comme identifiant
+    $user = User::create([
+        'name'      => $request->nom,
+        'email'     => $request->telephone . '@treso.app', // email fictif obligatoire
+        'telephone' => $request->telephone,
+        'password'  => Hash::make('123456789'),
+        'role'      => 'client',
+    ]);
+
+    // Créer l'étudiant lié
+    Etudiant::create([
+        'nom'           => $request->nom,
+        'telephone'     => $request->telephone,
+        'filiere'       => $request->filiere,
+        'maison_id'     => $request->maison_id,
+        'chambre'       => $request->chambre,
+        'loyer_mensuel' => $request->loyer_mensuel,
+        'date_debut'    => $request->date_debut,
+        'user_id'       => $user->id,
+    ]);
+
+    return redirect()->route('admin.etudiants.index')
+        ->with('success', "Étudiant créé. Identifiant : {$request->telephone} | Mot de passe : 123456789");
+}
     /**
      * Affiche le formulaire d'édition
      */
@@ -80,22 +106,57 @@ class EtudiantController extends Controller
     /**
      * Met à jour un étudiant
      */
-    public function update(Request $request, Etudiant $etudiant)
-    {
-        $validated = $request->validate([
-            'nom' => 'required|string|max:255',
-            'filiere' => 'required|string|max:255',
-            'maison_id' => 'required|exists:maisons,id',
-            'chambre' => 'required|string|max:50',
+ 
+
+public function update(Request $request, Etudiant $etudiant)
+{
+
+   $userId = $etudiant->user_id ?? 0;
+
+        $request->validate([
+            'nom'           => 'required|string|max:255',
+            'telephone'     => 'nullable|string|unique:etudiants,telephone,' . $etudiant->id . '|unique:users,telephone,' . $userId, // ← $userId ici
+            'filiere'       => 'required|string|max:255',
+            'maison_id'     => 'required|exists:maisons,id',
+            'chambre'       => 'required|string|max:50',
             'loyer_mensuel' => 'required|numeric|min:0',
-            'date_debut' => 'required|date',
+            'date_debut'    => 'required|date',
         ]);
 
-        $etudiant->update($validated);
-
-        return redirect()->route('admin.etudiants.index')
-            ->with('success', 'Étudiant modifié avec succès.');
+    // Si téléphone renseigné et pas encore de compte → créer le user
+    if ($request->telephone && !$etudiant->user_id) {
+        $user = User::create([
+            'name'      => $request->nom,
+            'email'     => $request->telephone . '@treso.app',
+            'telephone' => $request->telephone,
+            'password'  => Hash::make('123456789'),
+            'role'      => 'client',
+        ]);
+        $etudiant->user_id = $user->id;
     }
+
+    // Si téléphone modifié et user existe → mettre à jour le user aussi
+    if ($request->telephone && $etudiant->user_id) {
+        $etudiant->user->update([
+            'name'      => $request->nom,
+            'telephone' => $request->telephone,
+            'email'     => $request->telephone . '@treso.app',
+        ]);
+    }
+
+    $etudiant->update([
+        'nom'           => $request->nom,
+        'telephone'     => $request->telephone,
+        'filiere'       => $request->filiere,
+        'maison_id'     => $request->maison_id,
+        'chambre'       => $request->chambre,
+        'loyer_mensuel' => $request->loyer_mensuel,
+        'date_debut'    => $request->date_debut,
+    ]);
+
+    return redirect()->route('admin.etudiants.index')
+        ->with('success', 'Étudiant mis à jour avec succès.');
+}
 
     /**
      * Supprime un étudiant

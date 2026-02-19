@@ -9,59 +9,55 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
-        Schema::table('etudiants', function (Blueprint $table) {
-            if (!Schema::hasColumn('etudiants', 'maison_id')) return;
-            $table->index('maison_id');
-            if (Schema::hasColumn('etudiants', 'chambre')) {
-                $table->index('chambre');
-            }
-        });
+        public function up(): void
+        {
+            // Index etudiants
+            Schema::table('etudiants', function (Blueprint $table) {
+                $table->index('maison_id');
+                $table->index('user_id');   // ← important pour le login client
+            });
 
-        Schema::table('paiements', function (Blueprint $table) {
-            if (Schema::hasColumn('paiements', 'date_paiement')) {
+            // Index paiements
+            Schema::table('paiements', function (Blueprint $table) {
+                $table->index('etudiant_id'); // ← le plus important !
                 $table->index('date_paiement');
-            }
-        });
+            });
 
-        Schema::table('factures', function (Blueprint $table) {
-            if (Schema::hasColumn('factures', 'date_paiement')) {
-                $table->index('date_paiement');
-            }
-            if (Schema::hasColumn('factures', 'statut')) {
+            // Index demandes_paiement
+            Schema::table('demandes_paiement', function (Blueprint $table) {
+                $table->index('etudiant_id');
                 $table->index('statut');
-            }
-        });
-    }
+            });
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::table('etudiants', function (Blueprint $table) {
-            if (Schema::hasColumn('etudiants', 'maison_id')) {
+            // Index factures
+            Schema::table('factures', function (Blueprint $table) {
+                if (Schema::hasColumn('factures', 'statut')) {
+                    $table->index('statut');
+                }
+            });
+        }
+
+        public function down(): void
+        {
+            Schema::table('etudiants', function (Blueprint $table) {
                 $table->dropIndex(['maison_id']);
-            }
-            if (Schema::hasColumn('etudiants', 'chambre')) {
-                $table->dropIndex(['chambre']);
-            }
-        });
+                $table->dropIndex(['user_id']);
+            });
 
-        Schema::table('paiements', function (Blueprint $table) {
-            if (Schema::hasColumn('paiements', 'date_paiement')) {
+            Schema::table('paiements', function (Blueprint $table) {
+                $table->dropIndex(['etudiant_id']);
                 $table->dropIndex(['date_paiement']);
-            }
-        });
+            });
 
-        Schema::table('factures', function (Blueprint $table) {
-            if (Schema::hasColumn('factures', 'date_paiement')) {
-                $table->dropIndex(['date_paiement']);
-            }
-            if (Schema::hasColumn('factures', 'statut')) {
+            Schema::table('demandes_paiement', function (Blueprint $table) {
+                $table->dropIndex(['etudiant_id']);
                 $table->dropIndex(['statut']);
-            }
-        });
-    }
+            });
+
+            Schema::table('factures', function (Blueprint $table) {
+                if (Schema::hasColumn('factures', 'statut')) {
+                    $table->dropIndex(['statut']);
+                }
+            });
+        }
 };

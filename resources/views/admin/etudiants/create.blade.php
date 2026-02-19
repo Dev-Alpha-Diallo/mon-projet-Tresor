@@ -19,7 +19,7 @@
         <form action="{{ route('admin.etudiants.store') }}" method="POST" class="space-y-6">
             @csrf
 
-            <!-- Nom + Filière -->
+           <!-- Nom + Filière -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">
@@ -42,6 +42,28 @@
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
                 </div>
+            </div>
+
+            <!-- Téléphone -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">
+                    Numéro de téléphone
+                    <span class="text-xs font-normal text-indigo-500 ml-1">
+                        (sera utilisé comme identifiant de connexion)
+                    </span>
+                </label>
+                <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">+221</span>
+                    <input type="tel" name="telephone" value="{{ old('telephone') }}" required
+                        class="w-full pl-14 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        placeholder="77 123 45 67">
+                </div>
+                @error('telephone')
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                @enderror
+                <p class="text-xs text-gray-400 mt-1">
+                    💡 Mot de passe par défaut : <strong>123456789</strong>
+                </p>
             </div>
 
             <!-- Maison + Chambre -->

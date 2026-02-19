@@ -31,4 +31,8 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'wave' => [
+    'payment_link' => env('WAVE_PAYMENT_LINK', 'https://pay.wave.com/m/EXEMPLE/c/sn'),
+],
+
 ];

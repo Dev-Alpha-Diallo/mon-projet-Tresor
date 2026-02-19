@@ -18,7 +18,10 @@ class DashboardController extends Controller
     public function index()
     {
         $data = $this->rapportService->getDonneesDashboard();
-        
+
+        // Notification Wave
+        $data['notifPaiement'] = cache()->get('notif_admin_paiement');
+
         return view('admin.dashboard.index', $data);
     }
 }

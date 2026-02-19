@@ -4,6 +4,33 @@
 
 @section('content')
 <div class="space-y-6">
+
+        @if(isset($notifPaiement) && $notifPaiement)
+            <div id="notif-wave" class="bg-emerald-50 border border-emerald-300 rounded-2xl p-4 mb-6 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-emerald-800 text-sm">
+                            💰 Nouveau paiement Wave — {{ $notifPaiement['etudiant'] }}
+                        </p>
+                        <p class="text-xs text-emerald-600">
+                            {{ number_format($notifPaiement['montant'], 0, ',', ' ') }} FCFA •
+                            Transaction : <strong>{{ $notifPaiement['transaction_id'] }}</strong> •
+                            {{ $notifPaiement['date'] }}
+                        </p>
+                    </div>
+                </div>
+                <a href="{{ route('admin.etudiants.index') }}"
+                    class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition shrink-0">
+                    Valider
+                </a>
+            </div>
+        @endif
     <!-- En-tête -->
     <div class="flex items-center justify-between">
         <div>

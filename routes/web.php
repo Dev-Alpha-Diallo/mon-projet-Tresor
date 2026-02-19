@@ -11,16 +11,7 @@ use App\Http\Controllers\Admin\BailleurController;
 use App\Http\Controllers\Admin\PaiementBailleurController;
 use App\Http\Controllers\Admin\RapportController;
 use App\Http\Controllers\Client\DashboardController as ClientDashboardController;
-use App\Http\Controllers\Client\MensualiteController;
-use App\Http\Controllers\Client\PaiementController as ClientPaiementController;
-use App\Http\Controllers\Client\PaiementEnLigneController;
-use App\Http\Controllers\Client\HistoriqueController;
-use App\Http\Controllers\Client\ReclamationController;
-use App\Http\Controllers\Client\NotificationController;
-use App\Http\Controllers\Client\ProfilController;
-use App\Http\Controllers\Client\DocumentController;
-use App\Http\Controllers\Client\AmicaleController;
-use App\Http\Controllers\Client\LogementController;
+use App\Http\Controllers\Client\AuthController as ClientAuthController;
 
 // ================= PUBLIC ROUTES =================
 
@@ -41,7 +32,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     
-    // Étudiants - ROUTES SPÉCIFIQUES AVANT RESOURCE
+    // Étudiants
     Route::get('etudiants/search', [EtudiantController::class, 'search'])->name('etudiants.search');
     Route::get('etudiants/export/tous', [EtudiantController::class, 'exportTous'])->name('etudiants.export.tous');
     Route::get('etudiants/export/debiteurs', [EtudiantController::class, 'exportDebiteurs'])->name('etudiants.export.debiteurs');
@@ -65,58 +56,40 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::get('/telecharger', [RapportController::class, 'telecharger'])->name('telecharger');
         Route::get('/previsualiser', [RapportController::class, 'previsualiser'])->name('previsualiser');
     });
+
+    // ← Notifications Wave
+    Route::get('notifications', [App\Http\Controllers\Admin\NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/{id}/valider', [App\Http\Controllers\Admin\NotificationController::class, 'valider'])->name('notifications.valider');
+    Route::post('notifications/{id}/rejeter', [App\Http\Controllers\Admin\NotificationController::class, 'rejeter'])->name('notifications.rejeter');
+
+});
+     // ================= CLIENT ROUTES =================
+
+// Routes publiques client (guest seulement)
+Route::middleware('guest')->prefix('client')->name('client.')->group(function () {
+    Route::get('/login', [App\Http\Controllers\Client\AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [App\Http\Controllers\Client\AuthController::class, 'login'])->name('login.post');
 });
 
-// ================= CLIENT ROUTES =================
+// Routes protégées client
+Route::middleware(['auth', 'role:client'])->prefix('client')->name('client.')->group(function () {
+    Route::post('/logout', [App\Http\Controllers\Client\AuthController::class, 'logout'])->name('logout');
+    Route::get('/dashboard', [App\Http\Controllers\Client\DashboardController::class, 'index'])->name('dashboard');
 
-Route::middleware(['auth'])->prefix('client')->name('client.')->group(function () {
-    Route::get('/', [ClientDashboardController::class, 'index'])->name('dashboard');
-    Route::prefix('mensualites')->name('mensualites.')->group(function () {
-        Route::get('/', [MensualiteController::class, 'index'])->name('index');
-        Route::get('/{id}', [MensualiteController::class, 'show'])->name('show');
+    // Profil
+    Route::get('/profil', [App\Http\Controllers\Client\ProfilController::class, 'index'])->name('profil.index');
+    Route::put('/profil/password', [App\Http\Controllers\Client\ProfilController::class, 'updatePassword'])->name('profil.password');
+
+
+     // Détail paiement
+    Route::get('/paiements/{paiement}', [App\Http\Controllers\Client\PaiementController::class, 'show'])->name('paiements.show');
+
+    // ... routes existantes ...
+    Route::get('/payer', [App\Http\Controllers\Client\PaiementWaveController::class, 'index'])->name('paiement.wave');
+    Route::post('/payer', [App\Http\Controllers\Client\PaiementWaveController::class, 'soumettre'])->name('paiement.soumettre');
+
+  
+
     });
-    Route::prefix('paiements')->name('paiements.')->group(function () {
-        Route::get('/', [ClientPaiementController::class, 'index'])->name('index');
-        Route::get('/{id}/recu', [ClientPaiementController::class, 'downloadRecu'])->name('recu');
-    });
-    Route::prefix('paiement-en-ligne')->name('paiement-en-ligne.')->group(function () {
-        Route::get('/', [PaiementEnLigneController::class, 'index'])->name('index');
-        Route::post('/payer', [PaiementEnLigneController::class, 'payer'])->name('payer');
-        Route::get('/confirmation/{reference}', [PaiementEnLigneController::class, 'confirmation'])->name('confirmation');
-    });
-    Route::get('/historique', [HistoriqueController::class, 'index'])->name('historique');
-    Route::get('/historique/pdf', [HistoriqueController::class, 'pdf'])->name('historique.pdf');
-    Route::resource('reclamations', ReclamationController::class)->except(['edit', 'update']);
-    Route::post('/reclamations/{id}/message', [ReclamationController::class, 'message'])->name('reclamations.message');
-    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications');
-    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
-    Route::prefix('profil')->name('profil.')->group(function () {
-        Route::get('/', [ProfilController::class, 'index'])->name('index');
-        Route::put('/informations', [ProfilController::class, 'updateInfos'])->name('update-infos');
-        Route::put('/password', [ProfilController::class, 'updatePassword'])->name('update-password');
-        Route::post('/parent', [ProfilController::class, 'addParent'])->name('add-parent');
-    });
-    Route::prefix('documents')->name('documents.')->group(function () {
-        Route::get('/', [DocumentController::class, 'index'])->name('index');
-        Route::get('/contrat', [DocumentController::class, 'contrat'])->name('contrat');
-        Route::get('/quittances', [DocumentController::class, 'quittances'])->name('quittances');
-        Route::get('/reglement', [DocumentController::class, 'reglement'])->name('reglement');
-        Route::get('/{id}/download', [DocumentController::class, 'download'])->name('download');
-    });
-    Route::prefix('amicale')->name('amicale.')->group(function () {
-        Route::get('/', [AmicaleController::class, 'index'])->name('index');
-        Route::get('/annonces', [AmicaleController::class, 'annonces'])->name('annonces');
-        Route::get('/evenements', [AmicaleController::class, 'evenements'])->name('evenements');
-        Route::get('/reunions', [AmicaleController::class, 'reunions'])->name('reunions');
-        Route::get('/cotisations', [AmicaleController::class, 'cotisations'])->name('cotisations');
-    });
-    Route::prefix('logement')->name('logement.')->group(function () {
-        Route::get('/', [LogementController::class, 'index'])->name('index');
-        Route::get('/demande-changement', [LogementController::class, 'demandeChangement'])->name('demande-changement');
-        Route::post('/demande-changement', [LogementController::class, 'soumettreChangement'])->name('soumettre-changement');
-        Route::get('/demande-depart', [LogementController::class, 'demandeDepart'])->name('demande-depart');
-        Route::post('/demande-depart', [LogementController::class, 'soumettreDepart'])->name('soumettre-depart');
-        Route::get('/caution', [LogementController::class, 'caution'])->name('caution');
-    });
-});
+
+
