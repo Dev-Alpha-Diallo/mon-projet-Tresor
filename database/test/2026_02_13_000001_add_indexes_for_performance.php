@@ -14,7 +14,7 @@ return new class extends Migration
             // Index etudiants
             Schema::table('etudiants', function (Blueprint $table) {
                 $table->index('maison_id');
-                $table->index('user_id');   // ← important pour le login client
+                  // ← important pour le login client
             });
 
             // Index paiements

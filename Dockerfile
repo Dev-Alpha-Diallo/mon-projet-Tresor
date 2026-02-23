@@ -13,6 +13,11 @@ RUN apt-get update && apt-get install -y \
     supervisor \
     && docker-php-ext-install pdo pdo_pgsql mbstring zip bcmath
 
+# Installer NodeJS et npm
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs
+
+
 # Installer Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

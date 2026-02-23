@@ -24,9 +24,9 @@ class DatabaseSeeder extends Seeder
         );
 
         // Optionnel : Appeler les autres seeders
-        $this->call([
-            DemoDataSeeder::class,
-        ]);
+//        $this->call([
+  //          DemoDataSeeder::class,
+//        ]);
     }
 }
 
