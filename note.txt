@@ -6,3 +6,11 @@ User::create([
     'email' => 'alpha@example.com',
     'password' => Hash::make('password123')
 ]);
+
+
+docker compose up -d --build
+docker compose exec app php artisan migrate --force
+
+docker compose exec app php artisan optimize:clear
+
+docker compose exec app composer install
