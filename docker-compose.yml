@@ -1,5 +1,5 @@
-
 services:
+
   app:
     build:
       context: .
@@ -56,6 +56,31 @@ services:
     depends_on:
       - app
       - redis
+
+  tresorerie-backup:
+    image: postgres:16
+    container_name: tresorerie-backup
+    restart: unless-stopped
+    depends_on:
+      - db
+    volumes:
+      - ./backups:/backups
+    environment:
+      - PGPASSWORD=postgres
+    networks:
+      - tresorerie-network
+    entrypoint: >
+      bash -c "
+      while true; do
+        echo ' Backup started at $(date)';
+        DATE=$(date +%Y-%m-%d_%H-%M-%S);
+        pg_dump -h db -U postgres -Fc tresorerie > /backups/backup_$${DATE}.dump;
+        gzip /backups/backup_$${DATE}.dump;
+        find /backups -type f -mtime +7 -delete;
+        echo '✅ Backup done';
+        sleep 86400;
+      done
+      "
 
 volumes:
   pgdata:

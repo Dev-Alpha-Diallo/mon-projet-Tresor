@@ -397,7 +397,7 @@
 
         <!-- Footer -->
         <div class="footer">
-            <p><strong> © {{ date('Y') }} C.E.</strong></p>
+            <p><strong> © {{ date('Y') }} C.E.T</strong></p>
             <p>Document généré automatiquement par le système de gestion - Document confidentiel</p>
         </div>
     </div>

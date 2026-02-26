@@ -24,15 +24,17 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Créer le répertoire de travail
 WORKDIR /var/www/html
 
+RUN docker-php-ext-install dom
+
 # Copier les fichiers Laravel
 COPY . .
 
-# Installer les dépendances PHP via Composer
-RUN composer install --no-dev --optimize-autoloader
 
 # Donner les droits
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage
+RUN chown -R www-data:www-data /var/www/html/storage
+RUN chown -R www-data:www-data /var/www/html/bootstrap/cache
 
 # Exposer le port (PHP-FPM)
 EXPOSE 9000

@@ -14,3 +14,7 @@ docker compose exec app php artisan migrate --force
 docker compose exec app php artisan optimize:clear
 
 docker compose exec app composer install
+
+docker exec -it tresorerie-app php artisan config:clear
+docker exec -it tresorerie-app php artisan cache:clear
+docker exec -it tresorerie-app php artisan view:clear
