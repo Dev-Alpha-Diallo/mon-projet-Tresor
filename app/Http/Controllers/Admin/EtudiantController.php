@@ -251,24 +251,32 @@ public function update(Request $request, Etudiant $etudiant)
      * Exporte la liste des étudiants débiteurs en PDF
      */
     public function exportDebiteurs()
-    {
-        $etudiants = Etudiant::with(['maison.bailleur'])
-            ->get()
-            ->filter(fn($e) => $e->solde < 0)
-            ->sortBy('solde');
+{
+    $moisPrecedent = now()->subMonth();
+    $debutMois = $moisPrecedent->copy()->startOfMonth();
+    $finMois   = $moisPrecedent->copy()->endOfMonth();
 
-        $totalDettes = abs($etudiants->sum('solde'));
+    $etudiants = Etudiant::with(['maison.bailleur', 'paiements' => function($q) use ($debutMois, $finMois) {
+        // ✅ Filtre sur mois_paiement, pas date_paiement
+        $q->whereBetween('mois_paiement', [$debutMois, $finMois]);
+    }])
+    ->get()
+    ->filter(fn($e) => $e->paiements->isEmpty())
+    ->sortBy(fn($e) => $e->maison->nom ?? '');
 
-        $data = [
-            'titre' => 'Liste des étudiants débiteurs',
-            'etudiants' => $etudiants,
-            'nombreTotal' => $etudiants->count(),
-            'totalDettes' => $totalDettes,
-            'dateGeneration' => now()->format('d/m/Y à H:i'),
-        ];
+    $totalDettes = abs($etudiants->sum('solde'));
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadview('admin.etudiants.pdf.liste-debiteurs', $data);
-        
-        return $pdf->download('liste_debiteurs_' . date('Y-m-d') . '.pdf');
-    }
+    $data = [
+        'titre'          => 'Débiteurs ' . ucfirst($moisPrecedent->locale('fr')->isoFormat('MMMM YYYY')),
+        'sousTitre'      => 'N\'ont pas payé ' . ucfirst($moisPrecedent->locale('fr')->isoFormat('MMMM YYYY')),
+        'etudiants'      => $etudiants,
+        'nombreTotal'    => $etudiants->count(),
+        'totalDettes'    => $totalDettes,
+        'moisConcerne'   => ucfirst($moisPrecedent->locale('fr')->isoFormat('MMMM YYYY')),
+        'dateGeneration' => now()->format('d/m/Y à H:i'),
+    ];
+
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.etudiants.pdf.liste-debiteurs', $data);
+    return $pdf->download('debiteurs_' . $moisPrecedent->format('Y_m') . '.pdf');
+}
 }

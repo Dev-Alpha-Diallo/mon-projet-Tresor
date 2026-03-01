@@ -14,6 +14,7 @@ class Paiement extends Model
         'etudiant_id',
         'montant',
         'date_paiement',
+        'mois_paiement',
         'moyen_paiement',
         'remarque',
     ];
@@ -21,6 +22,7 @@ class Paiement extends Model
     protected $casts = [
         'montant' => 'decimal:2',
         'date_paiement' => 'date',
+        'mois_paiement' => 'date',
     ];
 
     /**

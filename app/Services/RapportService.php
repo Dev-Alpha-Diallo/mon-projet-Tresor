@@ -42,8 +42,10 @@ class RapportService
         $soldeCaisse   = $totalRecettes - $totalDepenses;
 
         $stats  = $this->computeEtudiantsStats(20, 20);
-        $maisons = Maison::with('bailleur')->withCount('etudiants')->get();
-
+// ✅ Remplace cette ligne dans computeDashboard()
+$maisons = Maison::with(['bailleur', 'paiements', 'factures', 'paiementsBailleur'])
+                 ->withCount('etudiants')
+                 ->get();
         return [
             'soldeCaisse'       => $soldeCaisse,
             'totalRecettes'     => $totalRecettes,

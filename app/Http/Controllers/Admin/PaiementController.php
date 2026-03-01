@@ -41,7 +41,6 @@ class PaiementController extends Controller
         if (old('etudiant_id')) {
             $selected = Etudiant::with('maison')->find(old('etudiant_id'));
         }
-
         return view('admin.paiements.create', compact('selected'));
     }
 
@@ -49,6 +48,7 @@ class PaiementController extends Controller
     {
         $validated = $request->validate([
             'etudiant_id'    => 'required|exists:etudiants,id',
+            'mois_paiement'  => 'required|date', // ✅ ajouté
             'montant'        => 'required|numeric|min:0.01|max:999999.99',
             'date_paiement'  => 'required|date|before_or_equal:today',
             'moyen_paiement' => 'required|in:especes,mobile_money,virement',
@@ -57,10 +57,22 @@ class PaiementController extends Controller
 
         $etudiant = Etudiant::findOrFail($validated['etudiant_id']);
 
-        // Validation date
+        // Validation date paiement
         if ($validated['date_paiement'] < $etudiant->created_at->format('Y-m-d')) {
             return back()->withInput()->withErrors([
-                'date_paiement' => 'La date de paiement ne peut pas être avant l\'inscription de l\'étudiant.',
+                'date_paiement' => 'La date ne peut pas être avant l\'inscription de l\'étudiant.',
+            ]);
+        }
+
+        // ✅ Vérifier si ce mois est déjà payé pour cet étudiant
+        $dejaPayé = Paiement::where('etudiant_id', $validated['etudiant_id'])
+            ->whereYear('mois_paiement',  date('Y', strtotime($validated['mois_paiement'])))
+            ->whereMonth('mois_paiement', date('m', strtotime($validated['mois_paiement'])))
+            ->exists();
+
+        if ($dejaPayé) {
+            return back()->withInput()->withErrors([
+                'mois_paiement' => 'Cet étudiant a déjà un paiement enregistré pour ce mois.',
             ]);
         }
 
@@ -75,7 +87,6 @@ class PaiementController extends Controller
             );
         }
 
-        // ← Vider le cache dashboard
         $this->rapportService->clearDashboardCache();
 
         return redirect()->route('admin.paiements.index')
@@ -85,7 +96,6 @@ class PaiementController extends Controller
     public function edit(Paiement $paiement)
     {
         $selected = $paiement->etudiant()->with('maison')->first();
-
         return view('admin.paiements.edit', compact('paiement', 'selected'));
     }
 
@@ -93,15 +103,28 @@ class PaiementController extends Controller
     {
         $validated = $request->validate([
             'etudiant_id'    => 'required|exists:etudiants,id',
+            'mois_paiement'  => 'required|date', // ✅ ajouté
             'montant'        => 'required|numeric|min:0.01|max:999999.99',
             'date_paiement'  => 'required|date|before_or_equal:today',
             'moyen_paiement' => 'required|in:especes,mobile_money,virement',
             'remarque'       => 'nullable|string|max:500',
         ]);
 
+        // ✅ Vérifier doublon sauf pour le paiement en cours de modification
+        $dejaPayé = Paiement::where('etudiant_id', $validated['etudiant_id'])
+            ->whereYear('mois_paiement',  date('Y', strtotime($validated['mois_paiement'])))
+            ->whereMonth('mois_paiement', date('m', strtotime($validated['mois_paiement'])))
+            ->where('id', '!=', $paiement->id) // ✅ exclure le paiement actuel
+            ->exists();
+
+        if ($dejaPayé) {
+            return back()->withInput()->withErrors([
+                'mois_paiement' => 'Cet étudiant a déjà un paiement enregistré pour ce mois.',
+            ]);
+        }
+
         $paiement->update($validated);
 
-        // ← Vider le cache dashboard
         $this->rapportService->clearDashboardCache();
 
         return redirect()->route('admin.paiements.index')
@@ -111,8 +134,6 @@ class PaiementController extends Controller
     public function destroy(Paiement $paiement)
     {
         $paiement->delete();
-
-        // ← Vider le cache dashboard
         $this->rapportService->clearDashboardCache();
 
         return redirect()->route('admin.paiements.index')
