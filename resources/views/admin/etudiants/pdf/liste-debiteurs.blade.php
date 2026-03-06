@@ -89,7 +89,6 @@
     <div style="margin-top: 15px; padding: 10px; background-color: #F3F4F6; border-left: 4px solid #6B7280;">
         <p style="margin: 0 0 5px 0; font-size: 10px;"><strong>📋 Recommandations :</strong></p>
         <ul style="margin: 0; padding-left: 20px; font-size: 10px;">
-            <li>Étudiants en <strong>rouge</strong> = retard de plus d'un mois — contacter en priorité</li>
             <li>Envoyer des rappels de paiement individuels</li>
             <li>Établir un plan de recouvrement avant fin du mois</li>
         </ul>

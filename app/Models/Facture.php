@@ -2,48 +2,66 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Facture extends Model
 {
-    use HasFactory;
-
-   protected $fillable = [
-    'maison_id',
-    'type',
-    'numero_facture',
-    'montant',
-    'date_paiement',
-    'description',
-    'statut'
-];
-
-
-    protected $casts = [
-        'montant' => 'decimal:2',
-        'date_paiement' => 'date',
+    protected $fillable = [
+        'maison_id',
+        'numero_facture',
+        'type',
+        'montant',
+        'date_emission',
+        'date_echeance',
+        'date_paiement',
+        'statut',
+        'description',
+        'remarques',
     ];
 
-    /**
-     * Relation : Une facture concerne une maison
-     */
-    public function maison(): BelongsTo
+    protected $casts = [
+        'date_emission'  => 'date',
+        'date_echeance'  => 'date',
+        'date_paiement'  => 'date',
+        'montant'        => 'decimal:2',
+    ];
+
+    public function maison()
     {
         return $this->belongsTo(Maison::class);
     }
 
-    /**
-     * Les types de factures disponibles
-     */
     public static function getTypes(): array
     {
         return [
-            'eau' => 'Eau',
-            'electricite' => 'Électricité',
-            'reparation' => 'Réparation',
-            'autre' => 'Autre',
+            'eau'         => '💧 Eau',
+            'electricite' => '⚡ Électricité',
+            'reparation'  => '🛠 Réparation',
+            'autre'       => '📦 Autre',
         ];
+    }
+
+    public function getStatutLabelAttribute(): string
+    {
+        return match($this->statut) {
+            'payee'   => 'Payée',
+            'partiel' => 'Partielle',
+            default   => 'Impayée',
+        };
+    }
+
+    public function getStatutColorAttribute(): string
+    {
+        return match($this->statut) {
+            'payee'   => 'green',
+            'partiel' => 'yellow',
+            default   => 'red',
+        };
+    }
+
+    // Est-elle en retard ?
+    public function getIsEnRetardAttribute(): bool
+    {
+        return $this->statut !== 'payee' && $this->date_echeance->isPast();
     }
 }
