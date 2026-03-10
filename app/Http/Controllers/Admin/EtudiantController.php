@@ -251,32 +251,32 @@ public function update(Request $request, Etudiant $etudiant)
      * Exporte la liste des étudiants débiteurs en PDF
      */
     public function exportDebiteurs()
-{
-    $moisPrecedent = now()->subMonth();
-    $debutMois = $moisPrecedent->copy()->startOfMonth();
-    $finMois   = $moisPrecedent->copy()->endOfMonth();
+    {
+        $moisPrecedent = now()->subMonth();
+        $debutMois = $moisPrecedent->copy()->startOfMonth();
+        $finMois   = $moisPrecedent->copy()->endOfMonth();
 
-    $etudiants = Etudiant::with(['maison.bailleur', 'paiements' => function($q) use ($debutMois, $finMois) {
-        // ✅ Filtre sur mois_paiement, pas date_paiement
-        $q->whereBetween('mois_paiement', [$debutMois, $finMois]);
-    }])
-    ->get()
-    ->filter(fn($e) => $e->paiements->isEmpty())
-    ->sortBy(fn($e) => $e->maison->nom ?? '');
+        $etudiants = Etudiant::with(['maison.bailleur', 'paiements' => function($q) use ($debutMois, $finMois) {
+            $q->whereBetween('mois_paiement', [$debutMois, $finMois]);
+        }])
+        // ✅ Uniquement les étudiants inscrits AVANT ou PENDANT le mois précédent
+        ->where('created_at', '<=', $finMois)
+        ->get()
+        ->filter(fn($e) => $e->paiements->isEmpty())
+        ->sortBy(fn($e) => $e->maison->nom ?? '');
 
-    $totalDettes = abs($etudiants->sum('solde'));
+        $totalDettes = $etudiants->sum('loyer_mensuel');
 
-    $data = [
-        'titre'          => 'Débiteurs ' . ucfirst($moisPrecedent->locale('fr')->isoFormat('MMMM YYYY')),
-        'sousTitre'      => 'N\'ont pas payé ' . ucfirst($moisPrecedent->locale('fr')->isoFormat('MMMM YYYY')),
-        'etudiants'      => $etudiants,
-        'nombreTotal'    => $etudiants->count(),
-        'totalDettes'    => $totalDettes,
-        'moisConcerne'   => ucfirst($moisPrecedent->locale('fr')->isoFormat('MMMM YYYY')),
-        'dateGeneration' => now()->format('d/m/Y à H:i'),
-    ];
+        $data = [
+            'titre'          => 'Débiteurs ' . ucfirst($moisPrecedent->locale('fr')->isoFormat('MMMM YYYY')),
+            'etudiants'      => $etudiants,
+            'nombreTotal'    => $etudiants->count(),
+            'totalDettes'    => $totalDettes,
+            'moisConcerne'   => ucfirst($moisPrecedent->locale('fr')->isoFormat('MMMM YYYY')),
+            'dateGeneration' => now()->format('d/m/Y à H:i'),
+        ];
 
-    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.etudiants.pdf.liste-debiteurs', $data);
-    return $pdf->download('debiteurs_' . $moisPrecedent->format('Y_m') . '.pdf');
-}
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.etudiants.pdf.liste-debiteurs', $data);
+        return $pdf->download('debiteurs_' . $moisPrecedent->format('Y_m') . '.pdf');
+    }
 }

@@ -35,29 +35,46 @@ class RapportService
         Cache::forget(self::CACHE_DASHBOARD_KEY);
     }
 
-    private function computeDashboard(): array
+        private function computeDashboard(): array
     {
         $totalRecettes = Paiement::sum('montant');
         $totalDepenses = Facture::sum('montant');
         $soldeCaisse   = $totalRecettes - $totalDepenses;
 
-        $stats  = $this->computeEtudiantsStats(20, 20);
-// ✅ Remplace cette ligne dans computeDashboard()
-$maisons = Maison::with(['bailleur', 'paiements', 'factures', 'paiementsBailleur'])
-                 ->withCount('etudiants')
-                 ->get();
+        // ✅ Mois précédent
+        $moisPrecedent = now()->subMonth();
+        $debutMois     = $moisPrecedent->copy()->startOfMonth();
+        $finMois       = $moisPrecedent->copy()->endOfMonth();
+
+        $stats = $this->computeEtudiantsStats(20, 20);
+
+        $maisons = Maison::with([
+            'bailleur',
+            'etudiants',  // pour calculer loyer attendu
+            'factures',
+            'paiementsBailleur',
+            // ✅ Paiements du mois précédent uniquement (via mois_paiement)
+            'paiements' => function($q) use ($debutMois, $finMois) {
+                $q->whereBetween('mois_paiement', [$debutMois, $finMois]);
+            }
+        ])
+        ->withCount('etudiants')
+        ->get();
+
         return [
-            'soldeCaisse'       => $soldeCaisse,
-            'totalRecettes'     => $totalRecettes,
-            'totalDepenses'     => $totalDepenses,
-            'nombreEtudiants'   => $stats['nombreEtudiants'],
-            'nombreDebiteurs'   => $stats['nombreDebiteurs'],
-            'nombreCrediteurs'  => $stats['nombreCrediteurs'],
-            'totalDettes'       => $stats['totalDettes'],
-            'totalAvances'      => $stats['totalAvances'],
-            'maisons'           => $maisons,
+            'soldeCaisse'         => $soldeCaisse,
+            'totalRecettes'       => $totalRecettes,
+            'totalDepenses'       => $totalDepenses,
+            'nombreEtudiants'     => $stats['nombreEtudiants'],
+            'nombreDebiteurs'     => $stats['nombreDebiteurs'],
+            'nombreCrediteurs'    => $stats['nombreCrediteurs'],
+            'totalDettes'         => $stats['totalDettes'],
+            'totalAvances'        => $stats['totalAvances'],
+            'maisons'             => $maisons,
             'etudiantsDebiteurs'  => $stats['etudiantsDebiteurs'],
             'etudiantsCrediteurs' => $stats['etudiantsCrediteurs'],
+            // ✅ Label du mois à afficher dans la vue
+            'moisLabel'           => ucfirst($moisPrecedent->locale('fr')->isoFormat('MMMM YYYY')),
         ];
     }
 

@@ -15,8 +15,7 @@
         table th { background-color: #DC2626; color: white; padding: 6px 8px; text-align: left; font-weight: bold; font-size: 10px; }
         table td { padding: 5px 8px; border-bottom: 1px solid #E5E7EB; font-size: 10px; }
         table tr:nth-child(even) { background-color: #FEF2F2; }
-        .amount-negative { color: #DC2626; font-weight: bold; }
-        .highlight-row { background-color: #FECACA !important; }
+        .amount { color: #DC2626; font-weight: bold; }
         .footer { margin-top: 20px; text-align: center; font-size: 9px; color: #6B7280; border-top: 1px solid #D1D5DB; padding-top: 8px; }
         .total-row { background-color: #FEE2E2; font-weight: bold; border-top: 2px solid #DC2626; }
     </style>
@@ -31,7 +30,9 @@
     </div>
 
     <div class="alert">
-        <strong>⚠️ ATTENTION :</strong> Liste des étudiants qui n'ont pas <strong>payé</strong> le mois de <strong>{{ $moisConcerne }}</strong>.
+        <strong>⚠️ ATTENTION :</strong>
+        Liste des étudiants qui n'ont effectué <strong>aucun paiement</strong>
+        pour le mois de <strong>{{ $moisConcerne }}</strong>.
     </div>
 
     <div class="summary">
@@ -39,10 +40,11 @@
             <strong>Nombre de débiteurs :</strong> {{ $nombreTotal }}
         </div>
         <div class="summary-item">
-            <strong>Total dettes réelles :</strong> {{ number_format($totalDettes, 0, ',', ' ') }} FCFA
+            <strong>Total loyers non payés :</strong> {{ number_format($totalDettes, 0, ',', ' ') }} FCFA
         </div>
         <div class="summary-item">
-            <strong>Moyenne :</strong> {{ $nombreTotal > 0 ? number_format($totalDettes / $nombreTotal, 0, ',', ' ') : 0 }} FCFA
+            <strong>Moyenne :</strong>
+            {{ $nombreTotal > 0 ? number_format($totalDettes / $nombreTotal, 0, ',', ' ') : 0 }} FCFA
         </div>
     </div>
 
@@ -50,36 +52,33 @@
         <thead>
             <tr>
                 <th style="width: 4%;">#</th>
-                <th style="width: 26%;">Nom complet</th>
+                <th style="width: 28%;">Nom complet</th>
                 <th style="width: 14%;">Filière</th>
-                <th style="width: 20%;">Maison</th>
+                <th style="width: 22%;">Maison</th>
                 <th style="width: 8%;">Chambre</th>
-                <th style="width: 14%;">Loyer/mois</th>
-                <th style="width: 14%;">Dette réelle</th>
+                <th style="width: 24%; text-align: right;">Loyer dû ({{ $moisConcerne }})</th>
             </tr>
         </thead>
         <tbody>
             @foreach($etudiants as $etudiant)
-            {{-- ✅ Rouge = doit plus d'un mois (solde < -loyer) --}}
-            <tr class="{{ $etudiant->solde < -$etudiant->loyer_mensuel ? 'highlight-row' : '' }}">
+            <tr>
                 <td>{{ $loop->iteration }}</td>
                 <td><strong>{{ $etudiant->nom }}</strong></td>
                 <td>{{ $etudiant->filiere }}</td>
                 <td>{{ $etudiant->maison->nom ?? 'N/A' }}</td>
                 <td style="text-align: center;">{{ $etudiant->chambre }}</td>
-                <td style="text-align: right;">{{ number_format($etudiant->loyer_mensuel, 0, ',', ' ') }} F</td>
-                {{-- ✅ Solde global réel --}}
-                <td style="text-align: right;" class="amount-negative">
-                    {{ number_format($etudiant->solde, 0, ',', ' ') }} F
+                {{-- ✅ Uniquement le loyer du mois, pas le solde --}}
+                <td style="text-align: right;" class="amount">
+                    {{ number_format($etudiant->loyer_mensuel, 0, ',', ' ') }} F
                 </td>
             </tr>
             @endforeach
 
             <tr class="total-row">
-                <td colspan="6" style="text-align: right; padding: 8px;">
-                    <strong>TOTAL DETTES RÉELLES :</strong>
+                <td colspan="5" style="text-align: right; padding: 8px;">
+                    <strong>TOTAL LOYERS NON PAYÉS — {{ strtoupper($moisConcerne) }} :</strong>
                 </td>
-                <td style="text-align: right; padding: 8px;" class="amount-negative">
+                <td style="text-align: right; padding: 8px;" class="amount">
                     <strong>{{ number_format($totalDettes, 0, ',', ' ') }} FCFA</strong>
                 </td>
             </tr>
@@ -89,7 +88,7 @@
     <div style="margin-top: 15px; padding: 10px; background-color: #F3F4F6; border-left: 4px solid #6B7280;">
         <p style="margin: 0 0 5px 0; font-size: 10px;"><strong>📋 Recommandations :</strong></p>
         <ul style="margin: 0; padding-left: 20px; font-size: 10px;">
-            <li>Envoyer des rappels de paiement individuels</li>
+            <li>Envoyer des rappels de paiement individuels pour <strong>{{ $moisConcerne }}</strong></li>
             <li>Établir un plan de recouvrement avant fin du mois</li>
         </ul>
     </div>

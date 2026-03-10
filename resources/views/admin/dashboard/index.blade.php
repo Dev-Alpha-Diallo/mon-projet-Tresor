@@ -226,48 +226,73 @@
             </div>
         </div>
 
-    <!-- Maisons -->
-    <div class="glass-effect rounded-2xl border border-gray-200/50 overflow-hidden">
-        <div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b">
-            <h2 class="text-lg font-bold text-gray-900">Maisons ({{ $maisons->count() }})</h2>
-        </div>
-        <div class="overflow-x-auto" style="max-height: 400px;">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50 sticky top-0">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Maison</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Bailleur</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Étudiants</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Solde</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    @forelse($maisons as $maison)
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4">
-                            <div class="text-sm font-semibold text-gray-900">{{ $maison->nom }}</div>
-                            <div class="text-xs text-gray-500">{{ Str::limit($maison->adresse, 30) }}</div>
-                        </td>
-                        <td class="px-6 py-4 text-sm text-gray-900">{{ $maison->bailleur->nom }}</td>
-                        <td class="px-6 py-4">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                {{ $maison->etudiants->count() }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold {{ $maison->solde >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                {{ number_format($maison->solde, 0, ',', ' ') }} F
-                            </span>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="4" class="px-6 py-8 text-center text-gray-500">Aucune maison</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+   <!-- Maisons -->
+<div class="glass-effect rounded-2xl border border-gray-200/50 overflow-hidden">
+    <div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b flex items-center justify-between">
+        <h2 class="text-lg font-bold text-gray-900">Maisons ({{ $maisons->count() }})</h2>
+        <span class="text-xs font-medium px-3 py-1 rounded-full bg-indigo-100 text-indigo-700">
+            Paiements {{ $moisLabel }}
+        </span>
     </div>
-
+    <div class="overflow-x-auto" style="max-height: 400px;">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50 sticky top-0">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Maison</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Bailleur</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Étudiants</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Payé en {{ $moisLabel }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase">Progression</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                @forelse($maisons as $maison)
+                @php
+                    $paiementsMois    = $maison->paiements->sum('montant');
+                    $loyerAttendu     = $maison->etudiants->sum('loyer_mensuel');
+                    $tauxRecouvrement = $loyerAttendu > 0
+                        ? round(($paiementsMois / $loyerAttendu) * 100)
+                        : 0;
+                    $couleur = $tauxRecouvrement >= 80 ? '#22c55e' : ($tauxRecouvrement >= 50 ? '#eab308' : '#ef4444');
+                @endphp
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-semibold text-gray-900">{{ $maison->nom }}</div>
+                        <div class="text-xs text-gray-500">{{ Str::limit($maison->adresse, 30) }}</div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900">{{ $maison->bailleur->nom }}</td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                            {{ $maison->etudiants_count }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-semibold {{ $paiementsMois > 0 ? 'text-green-700' : 'text-red-600' }}">
+                            {{ number_format($paiementsMois, 0, ',', ' ') }} F
+                        </div>
+                        <div class="text-xs text-gray-400 mt-0.5">
+                            sur {{ number_format($loyerAttendu, 0, ',', ' ') }} F attendus
+                        </div>
+                    </td>
+                    {{-- ✅ Colonne progression séparée --}}
+                    <td class="px-6 py-4" style="min-width: 140px;">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 bg-gray-200 rounded-full" style="height: 8px;">
+                                <div class="rounded-full" style="height: 8px; width: {{ max(min($tauxRecouvrement, 100), 2) }}%; background: {{ $couleur }};"></div>
+                            </div>
+                            <span class="text-xs font-semibold" style="color: {{ $couleur }}; min-width: 36px;">
+                                {{ $tauxRecouvrement }}%
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">Aucune maison</td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
 @endsection
